@@ -29,6 +29,7 @@ interface Annotation {
 	required?: boolean;
 	alternativeText?: string;
 	maxLen?: number;
+	defaultAppearanceData?: { fontSize: number };
 	buttonValue?: string | null;
 	exportValue?: string;
 }
@@ -101,7 +102,15 @@ export async function inventoryPdf(
 				if (a.subtype !== 'Widget' || a.hidden || !isWidgetKind(a.fieldType) || a.pushButton)
 					continue;
 				const name = a.fieldName ?? '';
-				const place = { page: index, rect: toTopLeftRect(a.rect, view, page.rotate) };
+				// pdf.js reads a `/DA`'s size as written: 0 asks for auto size, and a hostile one is Infinity.
+				const size = a.defaultAppearanceData?.fontSize ?? 0;
+				const place = {
+					page: index,
+					rect: toTopLeftRect(a.rect, view, page.rotate),
+					...((a.fieldType === 'Tx' || a.fieldType === 'Ch') && size > 0 && Number.isFinite(size)
+						? { fontSize: size }
+						: {})
+				};
 				// One name is one value in the file: typing into any widget that
 				// carries it fills every other. SF 1152 ships an original and a file
 				// copy sharing one field tree, so half its 60 field widgets are the

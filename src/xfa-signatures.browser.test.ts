@@ -130,7 +130,7 @@ it('reads a signature field after every control, so a control of its name keeps 
 		{
 			id: 'p1.Page1.form1.a',
 			kind: 'text',
-			places: [{ page: 0, rect: { x: 20, y: 60, w: 200, h: 20 } }],
+			places: [{ page: 0, rect: { x: 20, y: 60, w: 200, h: 20 }, fontSize: 10 }],
 			tooltip: undefined
 		},
 		{

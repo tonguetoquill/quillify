@@ -20,8 +20,8 @@ it('gives a second page to a form whose one page area may occur once in its page
 	]);
 	const rect = { x: 72, y: 72, w: 200, h: 20 };
 	expect(read.form.fields.map(({ id, kind, places }) => ({ id, kind, places }))).toEqual([
-		{ id: 'p1.Page1.form1.a.f', kind: 'text', places: [{ page: 0, rect }] },
-		{ id: 'p2.Page1.form1.b.f', kind: 'text', places: [{ page: 1, rect }] }
+		{ id: 'p1.Page1.form1.a.f', kind: 'text', places: [{ page: 0, rect, fontSize: 10 }] },
+		{ id: 'p2.Page1.form1.b.f', kind: 'text', places: [{ page: 1, rect, fontSize: 10 }] }
 	]);
 });
 

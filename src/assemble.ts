@@ -125,7 +125,8 @@ export function assembleQuill(
 				schema_field: f.name,
 				page: place.page,
 				rect: place.rect,
-				...(w.tooltip ? { tooltip: w.tooltip.toWellFormed() } : {})
+				...(w.tooltip ? { tooltip: w.tooltip.toWellFormed() } : {}),
+				...(place.fontSize ? { font_size: place.fontSize } : {})
 			}));
 		}),
 		widgets: signatures.flatMap((f) => {

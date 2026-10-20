@@ -58,6 +58,23 @@ it.each([
 	120_000
 );
 
+// SF 144's /DA sets its name field 8 pt, and DAF 1206's template sets its fields 12 pt.
+it.each([
+	['SF144', 8],
+	['DAF1206', 12]
+])(
+	'%s writes the size its form gives a text field as font_size: %i',
+	async (name, size) => {
+		const [, url] = Object.entries(fixtures).find(([path]) => path.includes(`/${name}_`))!;
+		const sanitized = await sanitize(new Uint8Array(await (await fetch(url)).arrayBuffer()));
+		if (!sanitized.ok) throw new Error(`${name} was refused as ${sanitized.refusal.code}`);
+		const tree = await built(sanitized.form, suggest(sanitized.form.fields));
+		const { fields } = JSON.parse(text(tree, 'form.yaml'));
+		expect(fields.map((field: { font_size?: number }) => field.font_size)).toContain(size);
+	},
+	120_000
+);
+
 it('ticks one box alone of those that share a name and differ in on-state', async () => {
 	const sanitized = await sanitize(await sharedNameCheckboxes());
 	if (!sanitized.ok) throw new Error(`refused as ${sanitized.refusal.code}`);

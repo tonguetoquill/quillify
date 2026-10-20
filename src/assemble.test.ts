@@ -227,6 +227,25 @@ describe('assembleQuill', () => {
 		expect(yaml.match(/max:/g)).toHaveLength(1);
 	});
 
+	it("writes a place's font size as font_size, and none where the form asks for auto size", () => {
+		const inventory = {
+			...INVENTORY,
+			widgets: INVENTORY.widgets.map((w) =>
+				w.id === 'FullName' ? { ...w, places: [{ ...w.places[0], fontSize: 9.5 }] } : w
+			)
+		};
+		const tree = assembleQuill(FORM, inventory, new Uint8Array());
+		const { fields } = JSON.parse(new TextDecoder().decode(tree.get('form.yaml')));
+		expect(fields[0]).toEqual({
+			name: 'FullName',
+			schema_field: 'full_name',
+			page: 0,
+			rect: rect(200, 94, 300, 22),
+			font_size: 9.5
+		});
+		expect(fields.slice(1).filter((field: object) => 'font_size' in field)).toEqual([]);
+	});
+
 	it('writes no example.md when no kept field carries a sample', () => {
 		const form = { ...FORM, fields: FORM.fields.map((f) => ({ ...f, example: undefined })) };
 		const tree = assembleQuill(form, INVENTORY, new Uint8Array());
