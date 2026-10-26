@@ -18,6 +18,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 import eprUrl from '../test/fixtures/AF716_Enlisted_Performance_Brief.pdf?url';
 import reserveUrl from '../test/fixtures/DAF1288_Application_for_Ready_Reserve_Assignment.pdf?url';
 import awardUrl from '../test/fixtures/DAF1206_Nomination_for_Award.pdf?url';
+import leaveUrl from '../test/fixtures/DAF988_Leave_Request_Authorization.pdf?url';
 import saarUrl from '../test/fixtures/DD2875_System_Authorization_Access_Request.pdf?url';
 import { displayList, type Run } from './display-list.js';
 import { normalizePdf } from './normalize.js';
@@ -144,7 +145,25 @@ it("breaks DAF 1288's text, in Times New Roman and Arial Narrow, into the lines 
 	expect(await lines(await published(reserveUrl))).toEqual({ designed: 53, broken: [] });
 }, 120_000);
 
-// DAF 988 places fields over its own labels, and lays scaled text out too wide (#291).
+it('lays out no text of DAF 988, scaled narrower or wider, outside the box that holds it', async () => {
+	const { spills } = await laid(await published(leaveUrl));
+	expect(spills).toEqual([]);
+}, 120_000);
+
+// DAF 988's template itself lays DODID_1, on each page, and TimeA over their labels.
+it('lays no text field of DAF 988 under printed text but those its template lays there', async () => {
+	const { covered } = await laid(await published(leaveUrl));
+	expect(
+		covered.filter(
+			(name) =>
+				name !== 'p1.PageArea1.AF988_Unlocked.Page1.DODID_1' &&
+				name !== 'p2.PageArea1.AF988_Unlocked.Page2.DODID_1' &&
+				name !== 'p3.PageArea1.AF988_Unlocked.Page3.DODID_1' &&
+				name !== 'p3.PageArea1.AF988_Unlocked.Page3.TimeA'
+		)
+	).toEqual([]);
+}, 120_000);
+
 it.each([
 	['AF 716', eprUrl],
 	['DAF 1206', awardUrl],
