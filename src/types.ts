@@ -68,6 +68,8 @@ export interface QualifiedField {
 	type: FieldType;
 	multiline: boolean;
 	options?: string[];
+	/** The value of its enum that checks this one's box, where it is one option's box. */
+	option?: string;
 	max?: number;
 	example?: string;
 	keep: boolean;

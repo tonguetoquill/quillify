@@ -82,7 +82,7 @@ it("ticks DAF 988's Ordinary leave box alone when its example is true", async ()
 	expect(ticked).toEqual([ordinary]);
 }, 120_000);
 
-it('ticks one box alone of those that share a name and differ in on-state', async () => {
+it('ticks the boxes of a shared name that turn on as the value it holds, and no other', async () => {
 	const sanitized = await sanitize(await sharedNameCheckboxes());
 	if (!sanitized.ok) throw new Error(`refused as ${sanitized.refusal.code}`);
 	const naming = suggest(sanitized.form.fields);
@@ -90,12 +90,17 @@ it('ticks one box alone of those that share a name and differ in on-state', asyn
 
 	const copies = ['copy', 'copy#2'];
 	const options = ['attached', 'attached#2', 'twice', 'twice#2', 'twice#3'];
-	for (const id of options) {
+	for (const [id, on, ticks] of [
+		['attached', 'is', ['attached']],
+		['attached', 'is_not', ['attached#2']],
+		['twice', 'one', ['twice', 'twice#3']],
+		['twice', 'two', ['twice#2']]
+	] as const) {
 		const { name } = naming.find((entry) => entry.id === id)!;
-		const filled = await render(quill, `~~~\n$quill: ${ref}\n$kind: main\n${name}: true\n~~~\n`);
+		const filled = await render(quill, `~~~\n$quill: ${ref}\n$kind: main\n${name}: ${on}\n~~~\n`);
 		const stamped = (await PDFDocument.load(filled)).getForm();
 		const ticked = [...options, ...copies].filter((box) => stamped.getCheckBox(box).isChecked());
-		expect(ticked).toEqual([id]);
+		expect(ticked).toEqual(ticks);
 	}
 }, 60_000);
 
@@ -316,6 +321,47 @@ describe('a form built by hand', () => {
 		const filled = (await PDFDocument.load(await render(quill, rendered))).getForm();
 		expect(['agree', 'sick', 'annual'].map((id) => filled.getCheckBox(id).isChecked())).toEqual([
 			true,
+			true,
+			false
+		]);
+	}, 60_000);
+
+	it('writes radio options of one group that share a name as one enum, each box checked by its own value', async () => {
+		const leave = naming.map((entry) =>
+			entry.id === 'sick' || entry.id === 'annual'
+				? { ...entry, name: 'leave', example: entry.id === 'annual' ? 'true' : undefined }
+				: entry
+		);
+		const tree = await built(await form(), leave);
+		expect(text(tree, 'Quill.yaml')).toContain(
+			[
+				'    "leave":',
+				'      type: enum',
+				'      values:',
+				'        - "S"',
+				'        - "A"',
+				'      default: ""',
+				'      description: ""',
+				''
+			].join('\n')
+		);
+		const { fields: entries } = JSON.parse(text(tree, 'Form.yaml'));
+		expect(
+			entries
+				.filter((entry: { schema_field: string }) => entry.schema_field === 'leave')
+				.map(({ name, option }: { name: string; option: string }) => [name, option])
+		).toEqual([
+			['sick', 'S'],
+			['annual', 'A']
+		]);
+		expect(text(tree, 'example.md')).toContain('\n"leave": "A"\n');
+
+		const { quill } = await fromTree(tree);
+		const example = quill.exampleDocument()!;
+		const rendered = example.toMarkdown();
+		example.free();
+		const filled = (await PDFDocument.load(await render(quill, rendered))).getForm();
+		expect(['annual', 'sick'].map((id) => filled.getCheckBox(id).isChecked())).toEqual([
 			true,
 			false
 		]);

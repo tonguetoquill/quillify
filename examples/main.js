@@ -48,6 +48,11 @@ picker.addEventListener('change', async () => {
 			// A signature is a place to sign, and takes no value.
 			if (field.kind === 'signature') return item;
 
+			// Options of one group that share a name are one enum, which the checked one answers.
+			const answer =
+				keep &&
+				field.kind === 'radio' &&
+				naming.fields.filter((entry) => entry.keep && entry.name === name).length > 1;
 			const boolean = field.kind === 'checkbox' || field.kind === 'radio';
 			const control = document.createElement(
 				field.kind === 'choice' ? 'select' : field.multiline ? 'textarea' : 'input'
@@ -58,7 +63,8 @@ picker.addEventListener('change', async () => {
 			if (field.kind === 'radio') control.name = field.group;
 			if (field.maxLength) control.maxLength = field.maxLength;
 			// suggest keeps every field but a read-only one, and the quill has only the kept.
-			if (keep) values.push([name, () => (boolean ? control.checked : control.value)]);
+			if (answer) values.push([name, () => (control.checked ? field.on : undefined)]);
+			else if (keep) values.push([name, () => (boolean ? control.checked : control.value)]);
 			else control.disabled = true;
 			item.querySelector('label').append(control);
 			return item;
@@ -71,7 +77,10 @@ picker.addEventListener('change', async () => {
 		event.preventDefault();
 		status.textContent = '';
 		const doc = new Document(`${quill.metadata.name}@${quill.metadata.version}`);
-		quill.writer(doc).setAll(Object.fromEntries(values.map(([name, value]) => [name, value()])));
+		const answered = values.map(([name, value]) => [name, value()]);
+		quill
+			.writer(doc)
+			.setAll(Object.fromEntries(answered.filter(([, value]) => value !== undefined)));
 		const out = await engine.render(quill, doc, { format: 'pdf' }).catch(failed);
 		URL.revokeObjectURL(link.href);
 		link.href = URL.createObjectURL(
