@@ -28,6 +28,9 @@ for (const [path, url] of Object.entries(fixtures)) {
 		const filled = naming.filter(
 			({ id, keep }) => keep && !byId.get(id)!.readOnly && byId.get(id)!.kind !== 'signature'
 		);
-		expect(Object.keys(quill.schema.main.fields)).toEqual(filled.map(({ name }) => name));
+		// Fields that share a name are one field of the schema, where the first of them is.
+		expect(Object.keys(quill.schema.main.fields)).toEqual([
+			...new Set(filled.map(({ name }) => name))
+		]);
 	}, 120_000);
 }

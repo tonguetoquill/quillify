@@ -125,6 +125,7 @@ export function assembleQuill(
 			return w.places.map((place, n) => ({
 				name: placeName(w.id, n),
 				schema_field: f.name,
+				...(f.option === undefined ? {} : { option: f.option }),
 				page: place.page,
 				rect: place.rect,
 				...(w.tooltip ? { tooltip: w.tooltip.toWellFormed() } : {})

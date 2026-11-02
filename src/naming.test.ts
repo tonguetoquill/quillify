@@ -188,18 +188,33 @@ describe('check', () => {
 		]);
 	});
 
-	it('reports a name that radio buttons share, even of one group', () => {
-		const radio = (id: string, on: string): Field => ({
+	describe('radio options that share a name', () => {
+		const radio = (id: string, on?: string, group = 'g'): Field => ({
 			...plain,
 			id,
 			kind: 'radio',
-			group: 'g',
+			group,
 			on
 		});
 		const entries = [kept('a', 'same'), kept('b', 'same')];
-		expect(check([radio('a', 'yes'), radio('b', 'no')], naming(...entries))).toEqual([
-			{ code: 'duplicate_name', name: 'same' }
-		]);
+
+		it('are one answer when they are of one group and each turns on as a value', () => {
+			expect(check([radio('a', 'yes'), radio('b', 'no')], naming(...entries))).toEqual([]);
+			expect(check([radio('a', 'yes'), radio('b', 'yes')], naming(...entries))).toEqual([]);
+		});
+
+		it.each<[string, Field]>([
+			['an option of another group', radio('b', 'no', 'h')],
+			['an option that turns on as no value', radio('b')],
+			['an option that turns on as a blank', radio('b', ' ')],
+			['an option whose on-state holds a character an enum value cannot', radio('b', 'yes|no')],
+			['an option whose on-state is not well formed', radio('b', 'n\ud800')],
+			['a box', { ...plain, id: 'b', kind: 'checkbox' }]
+		])('are reported when one shares it with %s', (_, other) => {
+			expect(check([radio('a', 'yes'), other], naming(...entries))).toEqual([
+				{ code: 'duplicate_name', name: 'same' }
+			]);
+		});
 	});
 
 	it('reports a name that signatures share', () => {
@@ -347,13 +362,17 @@ describe('suggest', () => {
 					: { ...base, kind: 'radio', group: scrap(), on: below(2) ? scrap() : undefined };
 			});
 			const suggested = suggest(generated);
-			const names = suggested.map((entry) => entry.name);
-			expect(new Set(names).size, names.join()).toBe(names.length);
+			// A name is one field's, or the options' of one radio group.
+			const owners = Map.groupBy(generated, (_, at) => suggested[at].name);
+			for (const [name, sharing] of owners) {
+				const groups = new Set(sharing.map((field) => field.kind === 'radio' && field.group));
+				expect(sharing.length === 1 || (groups.size === 1 && !groups.has(false)), name).toBe(true);
+			}
 			expect(check(generated, naming(...suggested))).toEqual([]);
 		}
 	});
 
-	describe('the options of a group that share a tooltip', () => {
+	describe('the options of a group', () => {
 		const option = (
 			id: string,
 			group: string,
@@ -369,118 +388,186 @@ describe('suggest', () => {
 		});
 		const named = (fields: Field[]) => suggest(fields).map(({ name }) => name);
 
-		it('are named by their on-states, and described by them', () => {
-			const pair = [
-				option('attached', 'attached', 'is', 'Job description'),
-				option('attached#2', 'attached', 'is_not', 'Job description')
-			];
-			expect(suggest(pair)).toEqual([
-				{
-					id: 'attached',
-					keep: true,
-					name: 'job_description_is',
-					description: 'Job description (is)'
-				},
-				{
-					id: 'attached#2',
-					keep: true,
-					name: 'job_description_is_not',
-					description: 'Job description (is_not)'
-				}
-			]);
+		describe('that each turn on as a value', () => {
+			it('share one name, from the tooltip they share, and are described by it', () => {
+				const pair = [
+					option('attached', 'attached', 'is', 'Job description'),
+					option('attached#2', 'attached', 'is_not', 'Job description')
+				];
+				expect(suggest(pair)).toEqual([
+					{ id: 'attached', keep: true, name: 'job_description', description: 'Job description' },
+					{ id: 'attached#2', keep: true, name: 'job_description', description: 'Job description' }
+				]);
+			});
+
+			it('are numbered by group when two groups share the tooltip', () => {
+				const patient = (group: string) => [
+					option(group, group, 'yes', 'The patient'),
+					option(`${group}#2`, group, 'no', 'The patient')
+				];
+				expect(named([...patient('a'), ...patient('b')])).toEqual([
+					'the_patient',
+					'the_patient',
+					'the_patient_2',
+					'the_patient_2'
+				]);
+			});
+
+			it('are named by the end of the group when their tooltips differ, and described by each', () => {
+				const fields = [
+					option('a', 'form1[0].smoker[0]', 'yes', 'Smoker'),
+					option('a#2', 'form1[0].smoker[0]', 'no', 'Non-smoker'),
+					option('b', 'h', 'yes'),
+					option('b#2', 'h', 'no')
+				];
+				expect(suggest(fields).map(({ name, description }) => [name, description])).toEqual([
+					['smoker', 'Smoker / Non-smoker'],
+					['smoker', 'Smoker / Non-smoker'],
+					['h', ''],
+					['h', '']
+				]);
+			});
+
+			it('share one name when the options a person can fill do, whatever a read-only one turns on as', () => {
+				const fields = [
+					option('a', 'g', 'yes', 'Smoker'),
+					option('a#2', 'g', 'no', 'Smoker'),
+					{ ...option('a#3', 'g', undefined, 'Smoker'), readOnly: true },
+					option('b', 'h', 'yes', 'Pet'),
+					{ ...option('b#2', 'h', 'no', 'Pet'), readOnly: true }
+				];
+				expect(suggest(fields).map(({ name, keep }) => [name, keep])).toEqual([
+					['smoker', true],
+					['smoker', true],
+					['smoker', false],
+					['pet_yes', true],
+					['pet_no', false]
+				]);
+			});
+
+			it('share one name when two of them turn on as one value', () => {
+				expect(
+					named([
+						option('a', 'g', 'one', 'Pick'),
+						option('a#2', 'g', 'two'),
+						option('a#3', 'g', 'one')
+					])
+				).toEqual(['pick', 'pick', 'pick']);
+			});
 		});
 
-		it('are numbered by group when two groups share the tooltip', () => {
-			const patient = (group: string) => [
-				option(group, group, 'yes', 'The patient'),
-				option(`${group}#2`, group, 'no', 'The patient')
-			];
-			expect(named([...patient('a'), ...patient('b')])).toEqual([
-				'the_patient_yes',
-				'the_patient_no',
-				'the_patient_yes_2',
-				'the_patient_no_2'
-			]);
-		});
+		describe('that share a tooltip, and not each turn on as a value', () => {
+			it('are named by their on-states, and described by them', () => {
+				const fields = [
+					option('attached', 'attached', 'is', 'Job description'),
+					option('attached#2', 'attached', 'is_not', 'Job description'),
+					option('attached#3', 'attached', undefined, 'Job description')
+				];
+				expect(suggest(fields)).toEqual([
+					{
+						id: 'attached',
+						keep: true,
+						name: 'job_description_is',
+						description: 'Job description (is)'
+					},
+					{
+						id: 'attached#2',
+						keep: true,
+						name: 'job_description_is_not',
+						description: 'Job description (is_not)'
+					},
+					{
+						id: 'attached#3',
+						keep: true,
+						name: 'job_description',
+						description: 'Job description'
+					}
+				]);
+			});
 
-		it('cut the words of a long tooltip and not the on-state', () => {
-			const tooltip = 'Enter the date on which the member signs this form';
-			const long = 'attached to this application';
-			const names = named([
-				option('a', 'g', 'yes', tooltip),
-				option('a#2', 'g', 'no', tooltip),
-				option('b', 'h', long, tooltip),
-				option('b#2', 'h', 'no', tooltip)
-			]);
-			expect(names).toEqual([
-				'enter_the_date_on_which_the_member_yes',
-				'enter_the_date_on_which_the_member_no',
-				'enter_the_attached_to_this_application',
-				'enter_the_date_on_which_the_member_no_2'
-			]);
-			for (const name of names) expect(name.length).toBeLessThanOrEqual(40);
-		});
+			it('cut the words of a long tooltip and not the on-state', () => {
+				const tooltip = 'Enter the date on which the member signs this form';
+				const long = 'attached to this application';
+				const names = named([
+					option('a', 'g', 'yes', tooltip),
+					option('a#2', 'g', 'no', tooltip),
+					option('a#3', 'g', undefined),
+					option('b', 'h', long, tooltip),
+					option('b#2', 'h', 'no', tooltip),
+					option('b#3', 'h', undefined)
+				]);
+				expect(names).toEqual([
+					'enter_the_date_on_which_the_member_yes',
+					'enter_the_date_on_which_the_member_no',
+					'g',
+					'enter_the_attached_to_this_application',
+					'enter_the_date_on_which_the_member_no_2',
+					'h'
+				]);
+				for (const name of names) expect(name.length).toBeLessThanOrEqual(40);
+			});
 
-		it('start with field_ when the tooltip starts with a digit', () => {
-			expect(
-				named([option('a', 'g', 'yes', '3rd party'), option('a#2', 'g', 'no', '3rd party')])
-			).toEqual(['field_3rd_party_yes', 'field_3rd_party_no']);
-		});
+			it('start with field_ when the tooltip starts with a digit', () => {
+				expect(
+					named([option('a', 'g', 'yes', '3rd party'), option('a#2', 'g', undefined, '3rd party')])
+				).toEqual(['field_3rd_party_yes', 'field_3rd_party']);
+			});
 
-		it('are named by the on-state alone when no whole word of the tooltip fits beside it', () => {
-			const long = 'accredited foreign government official';
-			const wide = 'x'.repeat(33);
-			expect(
-				named([
-					option('a', 'g', long, 'Appearance'),
-					option('a#2', 'g', 'no', 'Appearance'),
-					option('b', 'h', wide, '3rd party'),
-					option('b#2', 'h', 'no', '3rd party')
-				])
-			).toEqual([
-				'accredited_foreign_government_official',
-				'appearance_no',
-				wide,
-				'field_3rd_party_no'
-			]);
-		});
+			it('are named by the on-state alone when no whole word of the tooltip fits beside it', () => {
+				const long = 'accredited foreign government official';
+				const wide = 'x'.repeat(33);
+				expect(
+					named([
+						option('a', 'g', long, 'Appearance'),
+						option('a#2', 'g', undefined, 'Appearance'),
+						option('b', 'h', wide, '3rd party'),
+						option('b#2', 'h', undefined, '3rd party')
+					])
+				).toEqual([
+					'accredited_foreign_government_official',
+					'appearance',
+					wide,
+					'field_3rd_party'
+				]);
+			});
 
-		it('are named from the tooltip alone when the on-state has no words', () => {
-			const fields = [
-				option('a', 'g', 'dog', 'Pet'),
-				option('a#2', 'g', undefined, 'Pet'),
-				option('a#3', 'g', '-', 'Pet'),
-				option('a#4', 'g', '', 'Pet')
-			];
-			expect(suggest(fields).map(({ name, description }) => [name, description])).toEqual([
-				['pet_dog', 'Pet (dog)'],
-				['pet', 'Pet'],
-				['pet_2', 'Pet (-)'],
-				['pet_3', 'Pet']
-			]);
-		});
+			it('are named from the tooltip alone when the on-state has no words', () => {
+				const fields = [
+					option('a', 'g', 'dog', 'Pet'),
+					option('a#2', 'g', undefined, 'Pet'),
+					option('a#3', 'g', '-', 'Pet'),
+					option('a#4', 'g', '', 'Pet')
+				];
+				expect(suggest(fields).map(({ name, description }) => [name, description])).toEqual([
+					['pet_dog', 'Pet (dog)'],
+					['pet', 'Pet'],
+					['pet_2', 'Pet (-)'],
+					['pet_3', 'Pet']
+				]);
+			});
 
-		it('are named as before when each option has a tooltip of its own, or none', () => {
-			const fields = [
-				option('a', 'g', 'yes', 'Smoker'),
-				option('a#2', 'g', 'no', 'Non-smoker'),
-				option('b', 'h', 'yes'),
-				option('b#2', 'h', 'no')
-			];
-			expect(named(fields)).toEqual(['smoker', 'non_smoker', 'h_yes', 'h_no']);
-		});
+			it('are named as before when each option has a tooltip of its own, or none', () => {
+				const fields = [
+					option('a', 'g', 'yes', 'Smoker'),
+					option('a#2', 'g', undefined, 'Non-smoker'),
+					option('b', 'h', 'yes'),
+					option('b#2', 'h', undefined)
+				];
+				expect(named(fields)).toEqual(['smoker', 'non_smoker', 'h_yes', 'h']);
+			});
 
-		it('are named as before when the tooltip is shared with fields that are no option of the group', () => {
-			const box: Field = { ...plain, id: 'c', tooltip: 'Sex', kind: 'checkbox' };
-			const fields = [
-				option('a', 'g', 'm', 'Sex'),
-				option('b', 'h', 'f', 'Sex'),
-				box,
-				{ ...box, id: 'd' },
-				text('e', 'Sex')
-			];
-			expect(suggest(fields)[0].description).toBe('Sex');
-			expect(named(fields)).toEqual(['sex', 'sex_2', 'sex_3', 'sex_4', 'sex_5']);
+			it('are named as before when the tooltip is shared with fields that are no option of the group', () => {
+				const box: Field = { ...plain, id: 'c', tooltip: 'Sex', kind: 'checkbox' };
+				const fields = [
+					option('a', 'g', 'm', 'Sex'),
+					option('b', 'h', 'f', 'Sex'),
+					box,
+					{ ...box, id: 'd' },
+					text('e', 'Sex')
+				];
+				expect(suggest(fields)[0].description).toBe('Sex');
+				expect(named(fields)).toEqual(['sex', 'sex_2', 'sex_3', 'sex_4', 'sex_5']);
+			});
 		});
 	});
 });
