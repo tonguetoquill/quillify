@@ -201,13 +201,13 @@ describe('check', () => {
 		it('are one answer when they are of one group and each turns on as a value', () => {
 			expect(check([radio('a', 'yes'), radio('b', 'no')], naming(...entries))).toEqual([]);
 			expect(check([radio('a', 'yes'), radio('b', 'yes')], naming(...entries))).toEqual([]);
+			expect(check([radio('a', 'yes|no'), radio('b', 'a;b>c')], naming(...entries))).toEqual([]);
 		});
 
 		it.each<[string, Field]>([
 			['an option of another group', radio('b', 'no', 'h')],
 			['an option that turns on as no value', radio('b')],
 			['an option that turns on as a blank', radio('b', ' ')],
-			['an option whose on-state holds a character an enum value cannot', radio('b', 'yes|no')],
 			['an option whose on-state is not well formed', radio('b', 'n\ud800')],
 			['a box', { ...plain, id: 'b', kind: 'checkbox' }]
 		])('are reported when one shares it with %s', (_, other) => {

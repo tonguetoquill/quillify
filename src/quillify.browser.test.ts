@@ -68,7 +68,9 @@ it("ticks DAF 988's Ordinary leave box alone when its example is true", async ()
 	);
 	const tree = await built(sanitized.form, naming);
 	const { name } = naming.find((entry) => entry.id === ordinary)!;
-	expect(text(tree, 'example.md')).toContain(`\n"${name}": true\n`);
+	expect(text(tree, 'Quill.yaml')).toContain(
+		`    "${name}":\n      type: boolean\n      default: false\n      example: true\n`
+	);
 
 	const { quill } = await fromTree(tree);
 	const example = quill.exampleDocument()!;
@@ -174,7 +176,7 @@ describe('a form built by hand', () => {
 				'  name: "x"',
 				'  version: 0.1.0',
 				'  backend: acroform',
-				'  requires: ">=0.127"',
+				'  requires: ">=0.133"',
 				'  description: "A form."',
 				'',
 				'main:',
@@ -186,11 +188,13 @@ describe('a form built by hand', () => {
 				'      type: text',
 				'      default: ""',
 				'      max: 4',
+				'      example: "1234"',
 				'      description: ""',
 				'    "initial":',
 				'      type: text',
 				'      default: ""',
 				'      max: 1',
+				'      example: "\u{1D4D0}"',
 				'      description: ""',
 				'    "grade":',
 				'      type: enum',
@@ -198,6 +202,7 @@ describe('a form built by hand', () => {
 				'        - "E-1"',
 				'        - "E-2"',
 				'      default: ""',
+				'      example: "E-1"',
 				'      description: ""',
 				'    "component":',
 				'      type: enum',
@@ -205,6 +210,7 @@ describe('a form built by hand', () => {
 				'        - "RegAF"',
 				'        - "ANG"',
 				'      default: ""',
+				'      example: "ANG"',
 				'      description: ""',
 				'    "agree":',
 				'      type: boolean',
@@ -244,6 +250,7 @@ describe('a form built by hand', () => {
 				'      items:',
 				'        type: text',
 				'      default: []',
+				'      example: ["A1C Doe"]',
 				'      description: ""',
 				''
 			].join('\n')
@@ -251,20 +258,13 @@ describe('a form built by hand', () => {
 	});
 
 	it('shows a choice example only when it is an option, cuts a text example to the field, and shows no example of spaces', async () => {
-		expect(text(await built(await form(), naming), 'example.md')).toBe(
-			[
-				'~~~',
-				'$quill: "x"',
-				'"last4": "1234"',
-				'"initial": "\u{1D4D0}"',
-				'"grade": "E-1"',
-				'"component": "ANG"',
-				'"roster":',
-				'  - "A1C Doe"',
-				'~~~',
-				''
-			].join('\n')
-		);
+		expect(text(await built(await form(), naming), 'Quill.yaml').match(/example: .*/g)).toEqual([
+			'example: "1234"',
+			'example: "\u{1D4D0}"',
+			'example: "E-1"',
+			'example: "ANG"',
+			'example: ["A1C Doe"]'
+		]);
 	});
 
 	it('places every kept field once per place, a signature as a widget, and no field that is dropped or read-only', async () => {
@@ -304,17 +304,19 @@ describe('a form built by hand', () => {
 		).resolves.toEqual({ ok: false, problems: [{ code: 'duplicate_name', name: 'same' }] });
 	});
 
-	it('ticks a box and a radio option whose example is true, in example.md and in the engine', async () => {
+	it('ticks a box and a radio option whose example is true, in Quill.yaml and in the engine', async () => {
 		const examples: Record<string, string> = { agree: 'true', sick: ' true ', annual: 'yes' };
 		const ticked = naming.map((entry) =>
 			entry.id in examples ? { ...entry, example: examples[entry.id] } : entry
 		);
 		const tree = await built(await form(), ticked);
-		const markdown = text(tree, 'example.md');
-		expect(markdown).toContain('\n"agree": true\n"sick": true\n"roster":');
-		expect(markdown).not.toContain('"annual"');
-
 		const { quill } = await fromTree(tree);
+		const { fields: schema } = quill.schema.main;
+		expect(['agree', 'sick', 'annual'].map((name) => schema[name].example)).toEqual([
+			true,
+			true,
+			undefined
+		]);
 		const example = quill.exampleDocument()!;
 		const rendered = example.toMarkdown();
 		example.free();
@@ -341,6 +343,7 @@ describe('a form built by hand', () => {
 				'        - "S"',
 				'        - "A"',
 				'      default: ""',
+				'      example: "A"',
 				'      description: ""',
 				''
 			].join('\n')
@@ -354,9 +357,30 @@ describe('a form built by hand', () => {
 			['sick', 'S'],
 			['annual', 'A']
 		]);
-		expect(text(tree, 'example.md')).toContain('\n"leave": "A"\n');
 
 		const { quill } = await fromTree(tree);
+		const example = quill.exampleDocument()!;
+		const rendered = example.toMarkdown();
+		example.free();
+		const filled = (await PDFDocument.load(await render(quill, rendered))).getForm();
+		expect(['annual', 'sick'].map((id) => filled.getCheckBox(id).isChecked())).toEqual([
+			true,
+			false
+		]);
+	}, 60_000);
+
+	it('writes radio options whose on-states hold ;, > or | as one enum, each box checked by its own value', async () => {
+		const on: Record<string, string> = { sick: 'S;1', annual: 'A|2>1' };
+		const turned = fields.map((field) => (field.id in on ? { ...field, on: on[field.id] } : field));
+		const leave = naming.map((entry) =>
+			entry.id in on
+				? { ...entry, name: 'leave', example: entry.id === 'annual' ? 'true' : undefined }
+				: entry
+		);
+		const tree = await built({ ...(await form()), fields: turned }, leave);
+
+		const { quill } = await fromTree(tree);
+		expect(quill.schema.main.fields.leave.values).toEqual(['S;1', 'A|2>1']);
 		const example = quill.exampleDocument()!;
 		const rendered = example.toMarkdown();
 		example.free();
@@ -374,9 +398,8 @@ describe('a form built by hand', () => {
 			named('agree_again', { name: 'agree' })
 		];
 		const tree = await built({ ...(await form()), fields: [...fields, twin] }, shared);
-		expect(text(tree, 'example.md')).toContain('\n"agree": true\n');
-
 		const { quill } = await fromTree(tree);
+		expect(quill.schema.main.fields.agree.example).toBe(true);
 		const example = quill.exampleDocument()!;
 		const rendered = example.toMarkdown();
 		example.free();
@@ -411,11 +434,11 @@ describe('a form built by hand', () => {
 				'      type: text',
 				'      default: ""',
 				'      max: 4',
+				'      example: "1234"',
 				'      description: "What the member adds."'
 			].join('\n')
 		);
 		expect(yaml).not.toContain('"last4"');
-		expect(text(tree, 'example.md')).toContain('"remarks": "1234"\n');
 		const { fields } = JSON.parse(text(tree, 'Form.yaml'));
 		expect(
 			fields.filter((f: { schema_field: string }) => f.schema_field === 'remarks')
@@ -460,21 +483,19 @@ describe('a form built by hand', () => {
 	}, 60_000);
 
 	it("returns what the engine refuses as a problem that carries the engine's code", async () => {
-		// check takes any description. The engine takes one of a single line.
+		// check takes any snake_case name. The engine keeps `body` for the card's body.
 		const described: Naming = {
 			name: 'x',
 			description: 'A form.',
-			fields: naming.map((entry) =>
-				entry.id === 'remarks' ? { ...entry, description: 'One line\nand another' } : entry
-			)
+			fields: naming.map((entry) => (entry.id === 'remarks' ? { ...entry, name: 'body' } : entry))
 		};
 		await expect(quillify(await form(), described)).resolves.toEqual({
 			ok: false,
 			problems: [
 				{
 					code: 'engine',
-					diagnostic: 'quill::description_multiline',
-					message: expect.stringContaining('single line')
+					diagnostic: 'quill::reserved_field_name',
+					message: expect.stringContaining("'body'")
 				}
 			]
 		});
