@@ -34,7 +34,7 @@ A bundler has to follow `new URL('../assets/…', import.meta.url)` to copy them
 
 ## The engine
 
-`@quillmark/wasm` 0.127.0 or later is a peer. `quillify` calls its `init()` itself. A host that hands `init` a source of its own calls it before the first `quillify`.
+`@quillmark/wasm` 0.133.0 or later is a peer. `quillify` calls its `init()` itself. A host that hands `init` a source of its own calls it before the first `quillify`.
 
 ## Naming
 

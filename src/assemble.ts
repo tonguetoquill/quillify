@@ -37,27 +37,29 @@ function fieldYaml(field: Named): string[] {
 			if (!field.required) lines.push('      default: ""');
 			if (field.multiline) lines.push('      multiline: true');
 			if (field.max !== undefined) lines.push(`      max: ${field.max}`);
+			if (field.example !== undefined) lines.push(`      example: ${q(field.example)}`);
 			break;
 		case 'boolean':
 			lines.push('      type: boolean', '      default: false');
+			if (field.example === 'true') lines.push('      example: true');
 			break;
 		case 'enum': {
 			// The engine supplies the blank row and refuses it as a declared value. A
 			// dropdown with no other row offers nothing to choose, which is a text box.
-			// It refuses ";", ">" and "|" in a value too, so a dropdown with one is a text box.
 			const values = (field.options ?? []).filter((option) => option !== '');
-			if (values.length === 0 || values.some((value) => /[;>|]/.test(value)))
-				lines.push('      type: text');
+			if (values.length === 0) lines.push('      type: text');
 			else {
 				lines.push('      type: enum', '      values:');
 				for (const value of values) lines.push(`        - ${q(value)}`);
 			}
 			if (!field.required) lines.push('      default: ""');
+			if (field.example !== undefined) lines.push(`      example: ${q(field.example)}`);
 			break;
 		}
 		case 'array':
 			lines.push('      type: array', '      items:', '        type: text');
 			if (!field.required) lines.push('      default: []');
+			if (field.example !== undefined) lines.push(`      example: [${q(field.example)}]`);
 			break;
 	}
 	lines.push(`      description: ${q(field.description)}`);
@@ -70,7 +72,7 @@ export function quillYaml(form: Qualified, fields: Named[]): string {
 		`  name: ${q(form.quill.name)}`,
 		`  version: ${QUILL_VERSION}`,
 		'  backend: acroform',
-		'  requires: ">=0.127"',
+		'  requires: ">=0.133"',
 		`  description: ${q(form.quill.description)}`,
 		'',
 		'main:',
@@ -82,19 +84,6 @@ export function quillYaml(form: Qualified, fields: Named[]): string {
 		for (const field of fields) for (const line of fieldYaml(field)) lines.push(line);
 	}
 	return lines.join('\n') + '\n';
-}
-
-/** The sample values as the quill's example document, or null when no kept field carries one. */
-function exampleMarkdown(form: Qualified, fields: Named[]): string | null {
-	const lines = fields.flatMap((f) => {
-		if (f.example === undefined) return [];
-		if (f.type === 'boolean') return f.example === 'true' ? [`${q(f.name)}: true`] : [];
-		return f.type === 'array'
-			? [`${q(f.name)}:`, `  - ${q(f.example)}`]
-			: [`${q(f.name)}: ${q(f.example)}`];
-	});
-	if (lines.length === 0) return null;
-	return ['~~~', `$quill: ${q(form.quill.name)}`, ...lines, '~~~', ''].join('\n');
 }
 
 /**
@@ -150,8 +139,6 @@ export function assembleQuill(
 		['form.pdf', formPdf],
 		['Form.yaml', encoder.encode(escaped(JSON.stringify(formJson, null, 2)) + '\n')]
 	]);
-	const example = exampleMarkdown(form, schema);
-	if (example) tree.set('example.md', encoder.encode(example));
 	return tree;
 }
 

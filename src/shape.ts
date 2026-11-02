@@ -29,12 +29,10 @@ export function typed(
 
 /**
  * A radio option's on-state as a value of its group's enum, or undefined when
- * the engine refuses it as one: blank, holding ";", ">" or "|", or not well formed.
+ * the engine refuses it as one: blank or not well formed.
  */
 export const answer = (field: Field): string | undefined =>
-	field.kind === 'radio' && field.on?.trim() && !/[;>|]/.test(field.on) && field.on.isWellFormed()
-		? field.on
-		: undefined;
+	field.kind === 'radio' && field.on?.trim() && field.on.isWellFormed() ? field.on : undefined;
 
 /**
  * The value a field takes, which fields that share a name agree on. A signature
