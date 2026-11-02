@@ -4,6 +4,8 @@ What a consumer can observe, in the latest release and since. Earlier releases a
 
 ## Unreleased
 
+- A dynamic form's text whose font narrows or widens it is laid out and drawn at that width, so DAF 988's labels stay in their boxes and a widened paragraph starts at its box's left edge.
+
 ## v0.8.0 - 2026-10-21
 
 - A quill's field spec is `Form.yaml`, and its `Quill.yaml` declares `requires: ">=0.127"`, as `@quillmark/wasm` 0.127 reads it: that release refuses a `form.yaml`, and no acroform quill opens on both 0.126 and 0.127. The peer is `@quillmark/wasm` 0.127.0 or later. A host moves both together, and rebuilds a quill it stored from an earlier release, or renames its `form.yaml` to `Form.yaml` and adds the `requires` line.
