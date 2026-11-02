@@ -64,7 +64,11 @@ it('writes a ticked boolean as a bare true, no other boolean, and no signature',
 		},
 		new Uint8Array()
 	);
-	expect(text(tree, 'example.md')).toBe('~~~\n$quill: "sample"\n"a": "x"\n"tick": true\n~~~\n');
+	const yaml = text(tree, 'Quill.yaml');
+	expect(yaml.match(/example:.*/g)).toEqual(['example: "x"', 'example: true']);
+	expect(yaml).toContain(
+		'    "tick":\n      type: boolean\n      default: false\n      example: true\n'
+	);
 });
 
 it('writes a character the engine refuses as four hex digits', () => {
@@ -81,11 +85,13 @@ it('marks a text box that takes lines', () => {
 	expect(yaml).toContain('      default: ""\n      multiline: true\n');
 });
 
-it('makes a dropdown a text box when any one value holds what the engine refuses', () => {
+it('writes a dropdown whose values hold ;, > or | as an enum of them', () => {
 	const yaml = quillYaml({ quill: QUILL, fields: [] }, [
-		{ ...FIELD, type: 'enum', options: ['', 'a;b', 'c'] }
+		{ ...FIELD, type: 'enum', options: ['', 'a;b', 'c>d', 'e|f'] }
 	]);
-	expect(yaml).toContain('      type: text\n      default: ""\n      description');
+	expect(yaml).toContain(
+		'      type: enum\n      values:\n        - "a;b"\n        - "c>d"\n        - "e|f"\n      default: ""\n'
+	);
 });
 
 it('gives a dropdown and a list a default unless they are required', () => {
