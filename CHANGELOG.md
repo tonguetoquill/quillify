@@ -5,6 +5,7 @@ What a consumer can observe, in the latest release and since. Earlier releases a
 ## Unreleased
 
 - The options of a radio group that share a name are one enum field of their on-states, where each was a boolean, so a document picks one option. `suggest` gives the options of a group one name when each turns on as a value, and `check` takes a name that options of one group share. A naming that names them apart, as `suggest` did, still builds a boolean an option. Each option's `Form.yaml` entry carries `option:`, its own value, which `@quillmark/wasm` 0.127 reads. A host that stored a document of a quill from an earlier release keeps it on that quill, or moves each group's `true` to the group's field as the option's on-state.
+- A dynamic form's text whose font narrows or widens it is laid out and drawn at that width, so DAF 988's labels stay in their boxes and a widened paragraph starts at its box's left edge.
 
 ## v0.8.0 - 2026-10-21
 

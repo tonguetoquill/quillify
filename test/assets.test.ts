@@ -88,6 +88,10 @@ it('ships the pdf.js worker as the installed one but for the notice, the guards 
 	const MAX_CHARS = 'if (this.ui.textEdit && this.value.text?.maxChars) {';
 	const CELLS_OR_MAX_CHARS =
 		'const cells = (this.ui.textEdit || this.ui.numericEdit)?.comb?.numberOfCells; if (cells) { ui.children[0].attributes.maxLength = cells; } if ((this.ui.textEdit || this.ui.numericEdit) && this.value.text?.maxChars && !(cells < this.value.text.maxChars)) {';
+	const TYPEFACE = 'this.typeface = attributes.typeface || "Courier";';
+	const SCALE = 'if (key.endsWith("scale")) {';
+	const RICH_SIZE = 'style.fontSize = `calc(${style.fontSize} * var(--total-scale-factor))`;';
+	const PUSH = 'measure.pushData(xfaFont, margin, lineHeight);';
 	expect(differing, STALE).toEqual([
 		[BREAK, DRAWN_BREAK],
 		[BREAK, DRAWN_BREAK],
@@ -101,16 +105,37 @@ it('ships the pdf.js worker as the installed one but for the notice, the guards 
 			'extraNode[$getSubformParent] = savedMethod;',
 			'extraNode[$getSubformParent] = savedMethod; root[$extra].firstUnsplittable = savedFirst;'
 		],
+		[
+			'if (this.contentType === "text/html" && child[$namespaceId] === NamespaceIds.xhtml.id) {',
+			'if (this.contentType === "text/html" && child[$namespaceId] === NamespaceIds.xhtml.id) { child[_parent] = this;'
+		],
 		['if (!this.ui) {', 'if (!this.ui || this.ui.defaultUi || !this.ui[$getExtra]()) {'],
 		[
 			'const ui = this.ui[$toHTML]().html;',
 			'const ui = this.ui[$toHTML]().html ?? { name: "label", attributes: { class: ["xfaLabel"] }, children: [{ name: "div", attributes: { class: [this.ui.signature ? "xfaSignature" : this.ui.barcode ? "xfaBarcode" : this.ui.passwordEdit ? "xfaPasswordEdit" : "xfaImageEdit"], style: { width: "100%" } }, children: [] }] };'
 		],
 		[MAX_CHARS, CELLS_OR_MAX_CHARS],
+		[TYPEFACE, `${TYPEFACE} this.size *= this.fontHorizontalScale / 100;`],
 		['this[$extra].pageSetIndex = -1;', 'this[$extra].pageSetIndex = -1; this[$cleanPage]();'],
 		[
 			'for (const item of formNode.items.children) {',
 			'if (!formNode.bindItems.children.some(({ ref, connection }) => !connection && ref && searchNode(this.root, dataNode, ref, false, false))) return; for (const item of formNode.items.children) {'
+		],
+		[
+			SCALE,
+			`if (key === "xfa-font-horizontal-scale") { original.horizontalScale = Math.max(0, parseFloat(value) / 100); } else ${SCALE}`
+		],
+		[
+			RICH_SIZE,
+			`${RICH_SIZE} } if (original.horizontalScale === undefined && style.fontSize) { let host = node; while (host && !host.font) host = host[_parent]; if (host?.font?.fontHorizontalScale !== undefined && host.font.fontHorizontalScale !== 100) original.horizontalScale = host.font.fontHorizontalScale / 100; } if (original.horizontalScale !== undefined) { style.fontSize = style.fontSize ? \`calc(\${style.fontSize} * \${original.horizontalScale})\` : \`\${original.horizontalScale}em\`;`
+		],
+		[
+			'case "font-size":',
+			'case "xfa-font-horizontal-scale": xfaFont.horizontalScale = Math.max(0, parseFloat(value) / 100); break; case "font-size":'
+		],
+		[
+			PUSH,
+			`if (xfaFont.horizontalScale !== undefined) { xfaFont.size = (xfaFont.size || measure.fontSelector.topFont().xfaFont.size) * xfaFont.horizontalScale; } ${PUSH}`
 		],
 		[
 			'if (children.length === 0 && !this[$content]) {',

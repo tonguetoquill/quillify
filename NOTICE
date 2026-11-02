@@ -19,8 +19,10 @@ assets/pdf.worker.js
   logged, a line of text broken only where it is wider than its box at the
   size the browser draws it, a field's limit on what is typed taken from its
   comb's cells where its text sets no maxChars or a larger one and passed on
-  for a numeric field as for a text one, and the last line, which named a
-  source map, removed. The file's first line says the same.
+  for a numeric field as for a text one, a font's horizontal scale folded
+  into its size where the browser would draw it stretched or not at all,
+  and the last line, which named a source map, removed. The file's first
+  line says the same.
 
 assets/xfa-layer.js
   Lines 1270 to 1588 of web/pdf_viewer.css of pdfjs-dist 6.4.299, unchanged,
