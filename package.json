@@ -1,6 +1,6 @@
 {
 	"name": "@quillmark/quillify",
-	"version": "0.8.0",
+	"version": "0.9.0",
 	"description": "Turn a published PDF form (AcroForm or XFA) into a Quillmark quill, in the browser.",
 	"type": "module",
 	"license": "Apache-2.0",
