@@ -60,7 +60,9 @@ const media =
 
 it('stamps a field on its box when the crop box reaches past the media box on the left and the top', async () => {
 	const form = await taken(await sheet(crop([-50, 0, 612, 842])));
-	expect(form.fields[0].places).toEqual([{ page: 0, rect: { x: 72, y: 72, w: 200, h: 20 } }]);
+	expect(form.fields[0].places).toEqual([
+		{ page: 0, rect: { x: 72, y: 72, w: 200, h: 20 }, fontSize: 16 }
+	]);
 
 	const quillified = await quillify(form, {
 		name: 'overhang',
@@ -103,7 +105,7 @@ it.each([
 		expect(await boxes(form.pdf)).toEqual([{ media: view, crop: undefined }]);
 		expect(form.pages).toEqual([{ width: view[2] - view[0], height: view[3] - view[1] }]);
 		expect(form.fields[0].places).toEqual([
-			{ page: 0, rect: { x: 72 - view[0], y: view[3] - 720, w: 200, h: 20 } }
+			{ page: 0, rect: { x: 72 - view[0], y: view[3] - 720, w: 200, h: 20 }, fontSize: 16 }
 		]);
 	},
 	60_000

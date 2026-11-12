@@ -10,6 +10,8 @@ export interface Place {
 	/** Zero-based. */
 	page: number;
 	rect: Rect;
+	/** The size in points the form gives a text or choice value here, absent where it asks for auto size. */
+	fontSize?: number;
 }
 
 export type Field = {

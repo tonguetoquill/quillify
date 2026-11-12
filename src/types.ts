@@ -14,6 +14,8 @@ export type WidgetKind = (typeof WIDGET_KINDS)[number];
 export interface WidgetPlace {
 	page: number;
 	rect: Rect;
+	/** The size in points this widget's `/DA` gives a text or choice value, absent when it asks for auto size. */
+	fontSize?: number;
 }
 
 export interface InventoryWidget {

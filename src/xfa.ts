@@ -94,7 +94,9 @@ export async function xfaToAcroForm(bytes: Uint8Array, signal?: AbortSignal): Pr
 		}
 
 		stamp(out, widgets);
-		return await out.save();
+		// Saving would write the size pdf-lib fits to a box into a `/DA` that asks for auto size,
+		// and the inventory would read it as the form's.
+		return await out.save({ updateFieldAppearances: false });
 	} finally {
 		stage.close();
 		await opened?.close();
@@ -429,6 +431,7 @@ function stamp(doc: PDFDocument, widgets: XfaWidget[]): void {
 			const dropdown = rooted(PDFAcroComboBox.create(doc.context), widget.name, PDFDropdown.of);
 			dropdown.addOptions(widget.options.length ? widget.options : ['']);
 			dropdown.addToPage(page, box);
+			dropdown.setFontSize(widget.fontSize);
 			tooltip(dropdown, widget.tooltip);
 			continue;
 		}
@@ -450,6 +453,7 @@ function stamp(doc: PDFDocument, widgets: XfaWidget[]): void {
 		if (widget.kind === 'multiline') field.enableMultiline();
 		if (widget.maxLength) field.setMaxLength(widget.maxLength);
 		field.addToPage(page, box);
+		field.setFontSize(widget.fontSize);
 		tooltip(field, widget.tooltip);
 	}
 }

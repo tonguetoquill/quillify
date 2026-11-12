@@ -24,6 +24,8 @@ export interface XfaWidget {
 	options: string[];
 	/** The template's `maxChars`, which pdf.js writes as the control's `maxLength`. */
 	maxLength?: number;
+	/** The size in points the template gives the value: 0 asks for auto size. */
+	fontSize: number;
 }
 
 /**
@@ -124,6 +126,10 @@ export function harvestWidgets(page: XfaPage, pageNumber: number): XfaWidget[] {
 			kind === 'text' || kind === 'multiline'
 				? (el as HTMLInputElement | HTMLTextAreaElement).maxLength
 				: 0;
+		// pdf.js writes a field's font on its .xfaField at 0.99 of the template's size. A
+		// field with no font is XFA's default, 10 pt.
+		const font = el.closest<HTMLElement>('.xfaField')?.style.fontSize;
+		const fontSize = font ? Math.round((parseFloat(font) / 0.99) * 10) / 10 : 10;
 		widgets.push({
 			name: count === 1 ? base : `${base}#${count}`,
 			kind,
@@ -139,7 +145,8 @@ export function harvestWidgets(page: XfaPage, pageNumber: number): XfaWidget[] {
 			on: excl ? path.slice(path.lastIndexOf('.') + 1) : undefined,
 			tooltip,
 			options,
-			...(maxLength > 0 ? { maxLength } : {})
+			...(maxLength > 0 ? { maxLength } : {}),
+			fontSize
 		});
 	}
 	return widgets;

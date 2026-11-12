@@ -14,7 +14,7 @@ Every type named here is exported. `sanitize` needs a browser, and the other thr
 
 Reads a file and resolves to `{ ok: true, form }` or `{ ok: false, refusal }`. A file it does not take is a refusal, never an exception.
 
-A `Form` is `{ pdf, pages, fields }`: the background PDF, each page's size in points, and the fields. A `Field` has an `id`, its `places` (a zero-based `page` and a `rect` of `x`, `y`, `w`, `h` in points from the page's top left), `required`, `readOnly`, a `tooltip` when the form has one, and a `kind`:
+A `Form` is `{ pdf, pages, fields }`: the background PDF, each page's size in points, and the fields. A `Field` has an `id`, its `places` (a zero-based `page`, a `rect` of `x`, `y`, `w`, `h` in points from the page's top left and, on a text or choice field, the `fontSize` in points the form gives the value there, absent where it asks for auto size), `required`, `readOnly`, a `tooltip` when the form has one, and a `kind`:
 
 | `kind`      | Also carries             |
 | ----------- | ------------------------ |
@@ -23,6 +23,8 @@ A `Form` is `{ pdf, pages, fields }`: the background PDF, each page's size in po
 | `radio`     | `group`, `on`            |
 | `choice`    | `options`                |
 | `signature` |                          |
+
+The quill's `form.yaml` carries a place's `fontSize` as its `font_size`.
 
 ### Refusals
 
