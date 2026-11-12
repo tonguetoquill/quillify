@@ -1,10 +1,11 @@
 # Fixtures
 
-Eleven blank published forms, byte for byte but for a person's name or ID blanked in two, and one sample that `scripts/make-acroform-fixture.js` writes.
+Twelve blank published forms, byte for byte but for a person's name or ID blanked in two, and one sample that `scripts/make-acroform-fixture.js` writes.
 
 | File                                                              | Form      | Kind    | Locked | Pages | Fields |
 | ----------------------------------------------------------------- | --------- | ------- | ------ | ----- | ------ |
 | `DD1610_Request_and_Authorization_for_TDY_Travel.pdf`             | DD 1610   | hybrid  | yes    | 3     | 46     |
+| `DD1610-2026-09_Request_and_Authorization_for_TDY_Travel.pdf`     | DD 1610   | hybrid  | yes    | 3     | 46     |
 | `DD577_Appointment_Termination_Record.pdf`                        | DD 577    | hybrid  | yes    | 1     | 35     |
 | `DD689_Individual_Sick_Slip.pdf`                                  | DD 689    | hybrid  | yes    | 1     | 21     |
 | `SF144_Statement_of_Prior_Federal_Service.pdf`                    | SF 144    | plain   | no     | 2     | 44     |
@@ -21,7 +22,7 @@ Locked means AES-128 under the empty user password. Fields are counted as the in
 
 ## Add one
 
-1. Put the file here unchanged, with nothing a person entered. A name or ID of its author or contact is blanked, and its entry says so and keeps the published file's hash.
+1. Put the file here unchanged, with nothing a person entered. A name or ID of its author or contact is blanked, and its entry says so and keeps the published file's hash. A later edition of a form here joins it and the earlier one stays, its name carrying the year and month its publisher last changed the file before the first underscore, as its golden's does.
 2. Add its entry to `MANIFEST.json`, with its URL and the date checked ([#53](https://github.com/tonguetoquill/quillify/issues/53)).
 3. Add its row above, and for a published form its inventory to [`../goldens/`](../goldens).
 

@@ -41,10 +41,11 @@ flowchart TD
 - `KINDS` lists the keys each kind of dictionary keeps. A walk from the catalog deletes every other key and every unreached object.
 - To keep something new, add it to `KINDS`.
 
-### Assemble (`naming.ts`, `quillify.ts`, `assemble.ts`)
+### Assemble (`naming.ts`, `shape.ts`, `quillify.ts`, `assemble.ts`)
 
 - In: a `Form` and a `Naming`. Out: the quill's files, or the problems.
 - `check` throws a `TypeError` for a naming of the wrong shape. Anything else is a `Problem`.
+- Kept fields that take the same value may share a name, and get one schema field and every one of their places.
 - Write every string in `Quill.yaml` through `q` (a JSON string literal). `Quill.fromTree` gives the verdict.
 
 ## Modules
@@ -66,6 +67,7 @@ flowchart TD
 | `coords.ts`       | A rect from its page's top left         |
 | `strip.ts`        | The background, `KINDS`                 |
 | `naming.ts`       | `suggest` and `check`                   |
+| `shape.ts`        | The value a field takes                 |
 | `quillify.ts`     | `quillify`: field types, engine verdict |
 | `assemble.ts`     | The quill's files                       |
 

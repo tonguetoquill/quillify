@@ -18,7 +18,7 @@ A way past any of these is a vulnerability.
 - It requests only the package's own files.
 - The background keeps only allowlisted keys per kind of dictionary (`KINDS`, `src/strip.ts`) and objects the catalog reaches.
 - The form layer, scripts, attachments, metadata and bookmarks are gone.
-- Only links to `http://`, `https://` or a destination in the file stay.
+- A link stays only if it leads to `http://`, `https://` or a destination in the file, or is one of two kinds written back as an address the file did not hold: one that begins `www.` and has two dots, as the `http://` URL pdf.js opens for it, and one to a single `mailto:` mailbox, without its query. The `www.` address is printable ASCII with no backslash, a host name before its path, and no `.` or `..` path segment, escaped or not.
 - A dynamic (XFA) form is laid out in a sandboxed `<iframe>` that runs no script.
 - A file that reads two ways is refused as `damaged`. One known way is not: see Not handled (#265).
 - `quillify` writes every string into the quill's files as an escaped JSON string literal.
@@ -48,7 +48,7 @@ Known limits, and no vulnerability to report.
 - An image counts for the most its dictionary, its JPEG or JPEG 2000 header, or a CCITT image's `/DecodeParms` says. Not read: a JBIG2 stream's own size, which lies behind segments of varying length, and an image inside a content stream, whose end only a content-stream parser finds.
 - The bound counts bytes, not pixels: an image of 22,000 by 22,000 at a bit a pixel counts 60 MB, and the engine at 0.126.0 takes 10 s to paint its page to a canvas (#259).
 - `qpdf.wasm` is one publisher's prebuilt binary. A 1 kB file traps or hangs it, and a trap ends chrome-headless-shell on Linux (#46).
-- A link with no scheme, or to `mailto:`, is removed (#68).
+- A link with no scheme that pdf.js does not read as `http://`, and any `www.` or `mailto:` link the rules above do not keep (a port, user info, a dot segment, a host that is not plain letters, digits and hyphens, two mailboxes, a query), is removed.
 - The deadline ends only a wait on a worker: a call can settle after 60 s.
 - A dynamic form's background is not capped by file size: up to 32 MB.
 

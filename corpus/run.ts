@@ -24,7 +24,7 @@ it('the directory holds every form of the manifest and no other PDF', () => {
 
 /**
  * A refusal's code, or `converted` once the engine has stamped a field at every
- * place `form.yaml` gives, with what was read. `why` is the refusal or the
+ * place `Form.yaml` gives, with what was read. `why` is the refusal or the
  * problems, for the failure to print. The background of a form that converts
  * is walked against the strip's table on the way.
  */

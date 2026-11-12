@@ -37,27 +37,29 @@ function fieldYaml(field: Named): string[] {
 			if (!field.required) lines.push('      default: ""');
 			if (field.multiline) lines.push('      multiline: true');
 			if (field.max !== undefined) lines.push(`      max: ${field.max}`);
+			if (field.example !== undefined) lines.push(`      example: ${q(field.example)}`);
 			break;
 		case 'boolean':
 			lines.push('      type: boolean', '      default: false');
+			if (field.example === 'true') lines.push('      example: true');
 			break;
 		case 'enum': {
 			// The engine supplies the blank row and refuses it as a declared value. A
 			// dropdown with no other row offers nothing to choose, which is a text box.
-			// It refuses ";", ">" and "|" in a value too, so a dropdown with one is a text box.
 			const values = (field.options ?? []).filter((option) => option !== '');
-			if (values.length === 0 || values.some((value) => /[;>|]/.test(value)))
-				lines.push('      type: text');
+			if (values.length === 0) lines.push('      type: text');
 			else {
 				lines.push('      type: enum', '      values:');
 				for (const value of values) lines.push(`        - ${q(value)}`);
 			}
 			if (!field.required) lines.push('      default: ""');
+			if (field.example !== undefined) lines.push(`      example: ${q(field.example)}`);
 			break;
 		}
 		case 'array':
 			lines.push('      type: array', '      items:', '        type: text');
 			if (!field.required) lines.push('      default: []');
+			if (field.example !== undefined) lines.push(`      example: [${q(field.example)}]`);
 			break;
 	}
 	lines.push(`      description: ${q(field.description)}`);
@@ -70,6 +72,7 @@ export function quillYaml(form: Qualified, fields: Named[]): string {
 		`  name: ${q(form.quill.name)}`,
 		`  version: ${QUILL_VERSION}`,
 		'  backend: acroform',
+		'  requires: ">=0.133"',
 		`  description: ${q(form.quill.description)}`,
 		'',
 		'main:',
@@ -81,18 +84,6 @@ export function quillYaml(form: Qualified, fields: Named[]): string {
 		for (const field of fields) for (const line of fieldYaml(field)) lines.push(line);
 	}
 	return lines.join('\n') + '\n';
-}
-
-/** The sample values as the quill's example document, or null when no kept field carries one. */
-function exampleMarkdown(form: Qualified, fields: Named[]): string | null {
-	const lines = fields.flatMap((f) => {
-		if (f.example === undefined || f.type === 'boolean') return [];
-		return f.type === 'array'
-			? [`${q(f.name)}:`, `  - ${q(f.example)}`]
-			: [`${q(f.name)}: ${q(f.example)}`];
-	});
-	if (lines.length === 0) return null;
-	return ['~~~', `$quill: ${q(form.quill.name)}`, ...lines, '~~~', ''].join('\n');
 }
 
 /**
@@ -123,6 +114,7 @@ export function assembleQuill(
 			return w.places.map((place, n) => ({
 				name: placeName(w.id, n),
 				schema_field: f.name,
+				...(f.option === undefined ? {} : { option: f.option }),
 				page: place.page,
 				rect: place.rect,
 				...(w.tooltip ? { tooltip: w.tooltip.toWellFormed() } : {}),
@@ -141,15 +133,43 @@ export function assembleQuill(
 		})
 	};
 
+	const schema = byName(bound);
 	const encoder = new TextEncoder();
 	const tree = new Map<string, Uint8Array>([
-		['Quill.yaml', encoder.encode(quillYaml(form, bound))],
+		['Quill.yaml', encoder.encode(quillYaml(form, schema))],
 		['form.pdf', formPdf],
-		['form.yaml', encoder.encode(escaped(JSON.stringify(formJson, null, 2)) + '\n')]
+		['Form.yaml', encoder.encode(escaped(JSON.stringify(formJson, null, 2)) + '\n')]
 	]);
-	const example = exampleMarkdown(form, bound);
-	if (example) tree.set('example.md', encoder.encode(example));
 	return tree;
+}
+
+/**
+ * One schema field for the fields that share a name, at the first one's place
+ * and with its words where it has them. It is required when any of them is,
+ * and takes no more than the least of them takes, its example cut to fit.
+ */
+function byName(fields: Named[]): Named[] {
+	const named = new Map<string, Named>();
+	for (const field of fields) {
+		const first = named.get(field.name);
+		if (!first) {
+			named.set(field.name, field);
+			continue;
+		}
+		const caps = [first.max, field.max].filter((max) => max !== undefined);
+		const max = caps.length > 0 ? Math.min(...caps) : undefined;
+		const example = first.example ?? field.example;
+		named.set(field.name, {
+			...first,
+			title: first.title ?? field.title,
+			description: first.description || field.description,
+			required: first.required || field.required,
+			max,
+			example:
+				example !== undefined && max !== undefined ? [...example].slice(0, max).join('') : example
+		});
+	}
+	return [...named.values()];
 }
 
 /** Each place gets its own widget name, and all of a field's places name one schema field. */

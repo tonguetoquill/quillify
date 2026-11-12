@@ -1,10 +1,10 @@
 import {
+	PDFDict,
 	PDFDocument,
 	PDFHexString,
 	PDFName,
 	PDFRef,
 	PDFString,
-	type PDFDict,
 	type PDFPage
 } from 'pdf-lib';
 import { expect, it } from 'vitest';
@@ -52,6 +52,14 @@ const annotations = (page: PDFPage) =>
 	(page.node.Annots()?.asArray() ?? []).map((entry) =>
 		String(page.doc.context.lookup(entry)).replace(/\s+/g, ' ')
 	);
+
+/** A /URI action whose address is these bytes, one a character. */
+const uri = (address: string) => ({
+	S: 'URI',
+	URI: PDFHexString.of(
+		[...address].map((char) => char.charCodeAt(0).toString(16).padStart(2, '0')).join('')
+	)
+});
 
 const linked = (carried: object) => (page: PDFPage) =>
 	page.node.addAnnot(page.doc.context.register(page.doc.context.obj({ ...LINK, ...carried })));
@@ -215,17 +223,55 @@ it.each([
 		{ A: { S: 'URI', URI: PDFString.of(' http://example.com/') } }
 	],
 	[
-		'a link to an address with no scheme',
-		{ A: { S: 'URI', URI: PDFString.of('www.example.com') } }
-	],
-	[
-		'a link to a mailto: address',
-		{ A: { S: 'URI', URI: PDFString.of('mailto:office@example.com') } }
-	],
-	[
 		'a link to a file: address',
 		{ A: { S: 'URI', URI: PDFString.of('file:///C:/PRIVATE/form.pdf') } }
 	],
+	...[
+		'example.com/PRIVATE',
+		'www.example/PRIVATE',
+		'WWW.EXAMPLE.COM/PRIVATE',
+		'www.example.com/../../PRIVATE',
+		'www.example.com/a/%2E%2e/PRIVATE',
+		'www.example.com/./PRIVATE',
+		'www.example.com/..',
+		'www.example.com\\..\\PRIVATE',
+		'www.example.com /PRIVATE',
+		'www.example.com/\tPRIVATE',
+		'www.example.com/\x00PRIVATE',
+		'www.example.com/\x7fPRIVATE',
+		'www.example.com/\xe9PRIVATE',
+		' www.example.com/PRIVATE',
+		'www.example.com@PRIVATE.example.com',
+		'www.example.com:8080/PRIVATE',
+		'www..example.com/PRIVATE',
+		'www.ex_ample.com/PRIVATE',
+		'www.%65xample.com/PRIVATE',
+		'www.PRIVATE.example.com./a',
+		'mailto:',
+		'mailto:?to=PRIVATE@example.com',
+		'mailto:PRIVATE@example.com,other@example.com',
+		'mailto:PRIVATE@example.com;other@example.com',
+		'mailto:PRIVATE @example.com',
+		'mailto:PRIVATE@example.com\r\nBcc: other@example.com',
+		'mailto:PRIVATE\x00@example.com',
+		'mailto:<PRIVATE@example.com>',
+		'mailto:"PRIVATE"@example.com',
+		"mailto:PRIVATE'@example.com",
+		'mailto:PRIVATE%40example.com@example.com',
+		'mailto:PRIVATE@example.com#top',
+		'mailto:PRIVATE',
+		'mailto:PRIVATE@@example.com',
+		'mailto:PRIVATE@example',
+		'mailto:PRIVATE@[192.0.2.1]',
+		'mailto:.PRIVATE@example.com',
+		'mailto:PRIVATE\\@example.com',
+		'mailto:PRIVATE@\xe9xample.com',
+		'mailto: PRIVATE@example.com',
+		' mailto:PRIVATE@example.com',
+		'ftp://example.com/PRIVATE',
+		'FILE:///C:/PRIVATE/form.pdf',
+		'tel:PRIVATE'
+	].map((address) => [`a link to ${JSON.stringify(address)}`, { A: uri(address) }]),
 	[
 		'a link to an address spelled in UTF-16, which a URI never is',
 		{ A: { S: 'URI', URI: PDFHexString.fromText('https://example.com/') } }
@@ -311,6 +357,64 @@ it('keeps a link whose address is a hex string of ASCII', async () => {
 	expect(annotations(page)).toEqual([
 		'<< /Type /Annot /Subtype /Link /Rect [ 10 700 110 720 ] /A << /S /URI /URI <68747470733a2f2f6578616d706c652e636f6d2f> >> >>'
 	]);
+});
+
+it.each([
+	['www.example.com', 'http://www.example.com/'],
+	['www.example.gov/forms', 'http://www.example.gov/forms'],
+	['www.Example.gov/a_(1).pdf?b=c&d=..#e', 'http://www.example.gov/a_(1).pdf?b=c&d=..#e'],
+	['www.example/forms.pdf', 'http://www.example/forms.pdf'],
+	['www.xn--bcher-kva.example/forms', 'http://www.xn--bcher-kva.example/forms'],
+	['www.example.com/a..b/.c/', 'http://www.example.com/a..b/.c/'],
+	['www.example.com/a"b<c>{d}`', 'http://www.example.com/a%22b%3Cc%3E%7Bd%7D%60'],
+	['mailto:office@example.com', 'mailto:office@example.com'],
+	['MAILTO:Office.Desk+forms@Example.com', 'mailto:Office.Desk+forms@Example.com'],
+	[
+		'mailto:office@example.com?subject=PRIVATE&body=PRIVATE&attach=C:\\PRIVATE',
+		'mailto:office@example.com'
+	],
+	['mailto:office@example.com?', 'mailto:office@example.com']
+])('keeps a link to %s as a link to %s, and nothing else of the address', async (from, to) => {
+	const { page, text } = await background(linked({ A: { ...uri(from), Type: 'Action' } }));
+	expect(annotations(page)).toHaveLength(1);
+	const action = page.doc.context
+		.lookup(page.node.Annots()!.get(0), PDFDict)
+		.lookup(PDFName.of('A'), PDFDict);
+	expect(keys(action)).toEqual(['S', 'URI']);
+	const address = action.lookup(PDFName.of('URI'));
+	expect(address).toBeInstanceOf(PDFHexString);
+	expect(String.fromCharCode(...(address as PDFHexString).asBytes())).toBe(to);
+	expect(text).not.toContain('PRIVATE');
+});
+
+it('keeps a link to a www. address 200,000 characters long', async () => {
+	const { page } = await background(linked({ A: uri(`www.example.com/${'a'.repeat(200_000)}`) }));
+	expect(annotations(page)).toHaveLength(1);
+});
+
+it('drops a link to a www. address no URL reads, and keeps one beside it, where URL has no parse', async () => {
+	const parse = URL.parse;
+	delete (URL as { parse?: unknown }).parse;
+	try {
+		const { page, text } = await background((sheet) => {
+			linked({ A: uri('www.PRIVATE.1') })(sheet);
+			linked({ A: uri('www.example.com') })(sheet);
+		});
+		expect(annotations(page)).toHaveLength(1);
+		expect(text).not.toContain('PRIVATE');
+	} finally {
+		URL.parse = parse;
+	}
+});
+
+it('keeps a link to an http address as the file wrote it, though www. ones beside it are rewritten', async () => {
+	const { page } = await background((sheet) => {
+		linked({ A: uri('www.example.com') })(sheet);
+		linked({ A: { S: 'URI', URI: PDFString.of('http://www.Example.com/../a') } })(sheet);
+	});
+	expect(annotations(page)[1]).toBe(
+		'<< /Type /Annot /Subtype /Link /Rect [ 10 700 110 720 ] /A << /S /URI /URI (http://www.Example.com/../a) >> >>'
+	);
 });
 
 it('keeps a link that a page, the link and its action reach through references', async () => {

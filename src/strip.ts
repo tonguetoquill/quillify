@@ -254,6 +254,38 @@ const PICKS = new Map(
 	])
 );
 
+const MAILBOX = /^[\w!$*+~-]+(?:\.[\w!$*+~-]+)*@[a-z\d-]+(?:\.[a-z\d-]+)+$/i;
+const HOST = /^www(?:\.[a-z\d-]+)+$/i;
+
+/**
+ * The absolute address a link that holds one of two relative ones is kept as,
+ * or undefined where it goes. pdf.js opens an address that begins `www.` and
+ * holds two dots as `http://` and the address, read as a URL, and that URL is
+ * the one kept, where the address is printable ASCII with no backslash, the
+ * part before its path is a host name, and its path has no `.` or `..` segment,
+ * escaped or not. A `mailto:` address is kept as one mailbox, without its query:
+ * letters, digits and `_!$*+~-` in dot-separated runs, then `@` and a host name
+ * of two labels or more.
+ */
+function opened(bytes: Uint8Array): string | undefined {
+	// 'latin1' decodes as windows-1252; both tests below take only ASCII.
+	const text = new TextDecoder('latin1').decode(bytes);
+	if (/^mailto:/i.test(text)) {
+		const [mailbox] = text.slice('mailto:'.length).split('?', 1);
+		return MAILBOX.test(mailbox) ? `mailto:${mailbox}` : undefined;
+	}
+	if (bytes.some((byte) => byte < 0x21 || byte > 0x7e || byte === 0x5c)) return undefined;
+	if (!text.startsWith('www.') || text.split('.').length < 3) return undefined;
+	const [, host, path] = /^([^/?#]*)([^?#]*)/.exec(text)!;
+	if (!HOST.test(host) || path.split('/').some((part) => /^(?:\.|%2e){1,2}$/i.test(part)))
+		return undefined;
+	try {
+		return new URL(`http://${text}`).href;
+	} catch {
+		return undefined;
+	}
+}
+
 /**
  * The `acroform` background: the source file's pages, and of each dictionary
  * they hold the keys `KINDS` lists for its kind. With the rest of the catalog
@@ -265,6 +297,8 @@ const PICKS = new Map(
  *
  * Of a page's annotations a Link stays, when it leads to an http or https
  * address or to an explicit destination in the file, and leads there one way.
+ * One to a `www.` or `mailto:` address that `opened` reads stays too, its
+ * address written back as the one `opened` gives.
  * A named destination resolves through the catalog's `/Dests` or `/Names`,
  * which go, so a link to one goes too, and so does a link with an action
  * chained after its own. The action a link keeps is a copy, so nothing the file
@@ -319,13 +353,17 @@ export async function stripAcroForm(bytes: Uint8Array, views: View[]): Promise<U
 		if (is(action, 'S', 'GoTo')) return at(action, 'D') instanceof PDFArray && action.clone();
 		if (!is(action, 'S', 'URI')) return false;
 		const uri = at(action, 'URI');
+		if (!(uri instanceof PDFString || uri instanceof PDFHexString)) return false;
 		// A URI is ASCII, so its start is read off the bytes. Decoded as text, an
 		// address spelled in UTF-16 would pass here and be another one to a reader.
-		const head =
-			uri instanceof PDFString || uri instanceof PDFHexString
-				? String.fromCharCode(...uri.asBytes().subarray(0, 8))
-				: '';
-		return /^https?:\/\//i.test(head) && action.clone();
+		const bytes = uri.asBytes();
+		if (/^https?:\/\//i.test(String.fromCharCode(...bytes.subarray(0, 8)))) return action.clone();
+		const address = opened(bytes);
+		if (address === undefined) return false;
+		const kept = action.clone();
+		const hex = [...address].map((char) => char.charCodeAt(0).toString(16).padStart(2, '0'));
+		kept.set(PDFName.of('URI'), PDFHexString.of(hex.join('')));
+		return kept;
 	};
 
 	// pdf-lib throws at a catalog or a page tree it does not read as one.

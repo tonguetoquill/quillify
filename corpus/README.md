@@ -1,6 +1,6 @@
 # Corpus
 
-60 published federal forms the library is measured on. `manifest.json` lists each by SHA-256 with its kind, encryption and expected outcome: 58 convert and two are refused. Eleven are the fixtures in `test/fixtures`. The other forty-nine are kept outside git (decided in [#16](https://github.com/tonguetoquill/quillify/issues/16)), and only 18 lines record a URL, so a copy fetched today may be a later revision.
+61 published federal forms the library is measured on. `manifest.json` lists each by SHA-256 with its kind, encryption and expected outcome: 59 convert and two are refused. Twelve are the fixtures in `test/fixtures`. The other forty-nine are kept outside git (decided in [#16](https://github.com/tonguetoquill/quillify/issues/16)), and only 19 lines record a URL, so a copy fetched today may be a later revision.
 
 ```
 QUILLIFY_CORPUS=<directory that holds the PDFs> npm run corpus

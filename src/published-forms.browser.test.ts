@@ -158,7 +158,7 @@ describe('a form that paints one value in two places', () => {
 			inventory,
 			await stripAcroForm(bytes, inventory.views)
 		);
-		const formJson = JSON.parse(new TextDecoder().decode(quill.get('form.yaml')!)) as {
+		const formJson = JSON.parse(new TextDecoder().decode(quill.get('Form.yaml')!)) as {
 			fields: { name: string; schema_field: string }[];
 		};
 		expect(formJson.fields).toHaveLength(60);

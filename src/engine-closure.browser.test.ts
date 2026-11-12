@@ -11,7 +11,7 @@ const fixtures = import.meta.glob<string>('../test/fixtures/*.pdf', {
 
 for (const [path, url] of Object.entries(fixtures)) {
 	const form = path.slice(path.lastIndexOf('/') + 1).split(/[_.]/)[0];
-	it(`${form} renders with every form.yaml entry where it was placed, and no other field`, async () => {
+	it(`${form} renders with every Form.yaml entry where it was placed, and no other field`, async () => {
 		const sanitized = await sanitize(new Uint8Array(await (await fetch(url)).arrayBuffer()));
 		if (!sanitized.ok) throw new Error(`refused as ${sanitized.refusal.code}`);
 		const { pages, fields: read } = sanitized.form;

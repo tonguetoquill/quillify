@@ -23,11 +23,14 @@ for (const [path, url] of Object.entries(fixtures)) {
 
 		const { quill } = await fromTree(quillified.tree);
 		expect(quill.warnings).toEqual([]);
-		// A signature is a widget of form.yaml, not a field of the schema.
+		// A signature is a widget of Form.yaml, not a field of the schema.
 		const byId = new Map(sanitized.form.fields.map((field) => [field.id, field]));
 		const filled = naming.filter(
 			({ id, keep }) => keep && !byId.get(id)!.readOnly && byId.get(id)!.kind !== 'signature'
 		);
-		expect(Object.keys(quill.schema.main.fields)).toEqual(filled.map(({ name }) => name));
+		// Fields that share a name are one field of the schema, where the first of them is.
+		expect(Object.keys(quill.schema.main.fields)).toEqual([
+			...new Set(filled.map(({ name }) => name))
+		]);
 	}, 120_000);
 }

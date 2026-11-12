@@ -1,7 +1,7 @@
 /**
  * What `assembleQuill` writes where the carried test does not look: a
  * signature's tooltip, an example on a field that shows none, and the end of
- * `form.yaml`.
+ * `Form.yaml`.
  */
 
 import { expect, it } from 'vitest';
@@ -27,32 +27,48 @@ const placed = (id: string, kind: 'Tx' | 'Btn' | 'Sig', tooltip?: string) => ({
 const text = (tree: Map<string, Uint8Array>, name: string) =>
 	new TextDecoder().decode(tree.get(name));
 
-it('gives a signature its tooltip, and ends form.yaml with a line feed', () => {
+it('gives a signature its tooltip, and ends Form.yaml with a line feed', () => {
 	const tree = assembleQuill(
 		{ quill: QUILL, fields: [{ ...FIELD, widget: 'sig', name: 'sig' }] },
 		{ widgets: [placed('sig', 'Sig', 'Sign here')] },
 		new Uint8Array()
 	);
-	expect(JSON.parse(text(tree, 'form.yaml')).widgets).toEqual([
+	expect(JSON.parse(text(tree, 'Form.yaml')).widgets).toEqual([
 		{ name: 'sig', type: 'signature', page: 0, rect: RECT, tooltip: 'Sign here' }
 	]);
-	expect(text(tree, 'form.yaml').endsWith('}\n')).toBe(true);
+	expect(text(tree, 'Form.yaml').endsWith('}\n')).toBe(true);
 });
 
-it('writes no example for a boolean, and none for a signature', () => {
+it('writes a ticked boolean as a bare true, no other boolean, and no signature', () => {
+	const box = (name: string, example?: string) =>
+		({ ...FIELD, widget: name, name, type: 'boolean', example }) as const;
 	const tree = assembleQuill(
 		{
 			quill: QUILL,
 			fields: [
 				{ ...FIELD, example: 'x' },
-				{ ...FIELD, widget: 'tick', name: 'tick', type: 'boolean', example: 'true' },
+				box('tick', 'true'),
+				box('blank'),
+				box('other', 'yes'),
 				{ ...FIELD, widget: 'sig', name: 'sig', example: 'A-1' }
 			]
 		},
-		{ widgets: [placed('a', 'Tx'), placed('tick', 'Btn'), placed('sig', 'Sig')] },
+		{
+			widgets: [
+				placed('a', 'Tx'),
+				placed('tick', 'Btn'),
+				placed('blank', 'Btn'),
+				placed('other', 'Btn'),
+				placed('sig', 'Sig')
+			]
+		},
 		new Uint8Array()
 	);
-	expect(text(tree, 'example.md')).toBe('~~~\n$quill: "sample"\n"a": "x"\n~~~\n');
+	const yaml = text(tree, 'Quill.yaml');
+	expect(yaml.match(/example:.*/g)).toEqual(['example: "x"', 'example: true']);
+	expect(yaml).toContain(
+		'    "tick":\n      type: boolean\n      default: false\n      example: true\n'
+	);
 });
 
 it('writes a character the engine refuses as four hex digits', () => {
@@ -69,11 +85,13 @@ it('marks a text box that takes lines', () => {
 	expect(yaml).toContain('      default: ""\n      multiline: true\n');
 });
 
-it('makes a dropdown a text box when any one value holds what the engine refuses', () => {
+it('writes a dropdown whose values hold ;, > or | as an enum of them', () => {
 	const yaml = quillYaml({ quill: QUILL, fields: [] }, [
-		{ ...FIELD, type: 'enum', options: ['', 'a;b', 'c'] }
+		{ ...FIELD, type: 'enum', options: ['', 'a;b', 'c>d', 'e|f'] }
 	]);
-	expect(yaml).toContain('      type: text\n      default: ""\n      description');
+	expect(yaml).toContain(
+		'      type: enum\n      values:\n        - "a;b"\n        - "c>d"\n        - "e|f"\n      default: ""\n'
+	);
 });
 
 it('gives a dropdown and a list a default unless they are required', () => {
@@ -92,7 +110,7 @@ it('names the second place of a field after the first, with its tooltip, two spa
 		{ widgets: [{ id: 'a', kind: 'Tx', tooltip: 'Name', places }] },
 		new Uint8Array()
 	);
-	expect(JSON.parse(text(tree, 'form.yaml')).fields).toEqual(
+	expect(JSON.parse(text(tree, 'Form.yaml')).fields).toEqual(
 		[0, 1].map((page) => ({
 			name: page ? 'a#2' : 'a',
 			schema_field: 'a',
@@ -101,5 +119,5 @@ it('names the second place of a field after the first, with its tooltip, two spa
 			tooltip: 'Name'
 		}))
 	);
-	expect(text(tree, 'form.yaml')).toContain('{\n  "schema": "quillmark/form@0.2.0",\n');
+	expect(text(tree, 'Form.yaml')).toContain('{\n  "schema": "quillmark/form@0.2.0",\n');
 });

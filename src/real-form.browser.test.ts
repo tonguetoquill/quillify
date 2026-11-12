@@ -71,7 +71,7 @@ describe('a form in the shape of DD Form 2977', () => {
 		const tree = assembleQuill(qualify(inventory), inventory, background);
 		const yaml = new TextDecoder().decode(tree.get('Quill.yaml')!);
 		expect(yaml).toContain('backend: acroform');
-		const formJson = JSON.parse(new TextDecoder().decode(tree.get('form.yaml')!)) as {
+		const formJson = JSON.parse(new TextDecoder().decode(tree.get('Form.yaml')!)) as {
 			schema: string;
 			fields: { schema_field: string; page: number }[];
 		};

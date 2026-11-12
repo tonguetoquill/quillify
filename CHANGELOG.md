@@ -4,10 +4,10 @@ What a consumer can observe, in the latest release and since. Earlier releases a
 
 ## Unreleased
 
-- A text or choice field keeps the font size its form gives its value: each `Place` carries it as `fontSize`, and the quill's `form.yaml` as that box's `font_size`. A box whose form asks for auto size carries none, and a dynamic form's field with no font of its own is XFA's 10 pt.
+- A text or choice field keeps the font size its form gives its value: each `Place` carries it as `fontSize`, and the quill's `Form.yaml` as that box's `font_size`. A box whose form asks for auto size carries none, and a dynamic form's field with no font of its own is XFA's 10 pt.
 
-## v0.7.0 - 2026-10-19
+## v0.9.0 - 2026-11-02
 
-- A dynamic form's Calibri is laid out in Carlito, a face of its widths the package ships, so its labels break where the form's designer broke them on any machine. A form that names Calibri fetches only the styles it uses, and a host that copies `assets/` by hand copies the four `Carlito-*.ttf` too: one that does not load ends the conversion with an error that names it.
-- A dynamic form's Times New Roman and Courier New are laid out in Liberation Serif and Mono, faces of their widths the package ships, so they lay out alike on any machine. A host that copies `assets/` by hand copies their eight files too.
-- A dynamic form's text is broken into lines where it is wider than its box at the size the browser draws it, so a label that fits no longer grows its box and drops onto the field under it.
+- A quill's example is its fields' `example:` in `Quill.yaml`, and the tree holds no `example.md`, as `@quillmark/wasm` 0.133 reads it: that release ignores a root `example.md`. `Quill.yaml` declares `requires: ">=0.133"`, and the peer is `@quillmark/wasm` 0.133.0 or later. A dropdown whose options hold `;`, `>` or `|` is an enum, where it was a text field, and a radio group whose on-states hold them is one enum, where its options were booleans. A field description of more than one line builds, where the engine refused it. A host moves both together, and rebuilds a quill it stored from an earlier release, or moves each value of its `example.md` onto its field as `example:` and raises the `requires` line.
+- The options of a radio group that share a name are one enum field of their on-states, where each was a boolean, so a document picks one option. `suggest` gives the options of a group one name when each turns on as a value, and `check` takes a name that options of one group share. A naming that names them apart, as `suggest` did, still builds a boolean an option. Each option's `Form.yaml` entry carries `option:`, its own value, which `@quillmark/wasm` 0.127 reads. A host that stored a document of a quill from an earlier release keeps it on that quill, or moves each group's `true` to the group's field as the option's on-state.
+- A dynamic form's text whose font narrows or widens it is laid out and drawn at that width, so DAF 988's labels stay in their boxes and a widened paragraph starts at its box's left edge.

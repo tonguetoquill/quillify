@@ -66,10 +66,10 @@ for (const [path, url] of Object.entries(fixtures)) {
 			expect(objects.filter((object) => object.type !== 'signature' && !object.editable)).toEqual(
 				[]
 			);
-			// A field painted in two places is two widgets, and `form.yaml` names each.
+			// A field painted in two places is two widgets, and `Form.yaml` names each.
 			const typed = new Set(naming.filter((entry) => entry.example).map((entry) => entry.name));
 			const placed: { name: string; schema_field: string }[] = JSON.parse(
-				new TextDecoder().decode(quillified.tree.get('form.yaml'))
+				new TextDecoder().decode(quillified.tree.get('Form.yaml'))
 			).fields;
 			for (const { name, schema_field } of placed)
 				if (typed.has(schema_field))

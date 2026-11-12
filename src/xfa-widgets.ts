@@ -11,7 +11,7 @@ export interface XfaWidget {
 	name: string;
 	kind: XfaKind;
 	page: number;
-	/** Points, top-left origin, page-relative: the rect `form.yaml` wants. */
+	/** Points, top-left origin, page-relative: the rect `Form.yaml` wants. */
 	x: number;
 	y: number;
 	w: number;

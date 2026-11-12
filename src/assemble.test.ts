@@ -141,17 +141,18 @@ export const FORM: QualifiedForm = {
 };
 
 describe('assembleQuill', () => {
-	it('writes Quill.yaml, form.pdf, form.yaml and example.md', () => {
+	it('writes Quill.yaml, form.pdf and Form.yaml, the examples in Quill.yaml', () => {
 		const pdf = new Uint8Array([0x25, 0x50, 0x44, 0x46]);
 		const tree = assembleQuill(FORM, INVENTORY, pdf);
 		const text = (name: string) => new TextDecoder().decode(tree.get(name));
-		expect([...tree.keys()]).toEqual(['Quill.yaml', 'form.pdf', 'form.yaml', 'example.md']);
+		expect([...tree.keys()]).toEqual(['Quill.yaml', 'form.pdf', 'Form.yaml']);
 		expect(tree.get('form.pdf')).toBe(pdf);
 		expect(text('Quill.yaml')).toMatchInlineSnapshot(`
 			"quill:
 			  name: "sample_form"
 			  version: 0.1.0
 			  backend: acroform
+			  requires: ">=0.133"
 			  description: "A sample application."
 
 			main:
@@ -161,12 +162,14 @@ describe('assembleQuill', () => {
 			    "full_name":
 			      type: text
 			      default: ""
+			      example: "Ada Lovelace"
 			      description: "Full legal name of the applicant."
 			    "comments":
 			      type: array
 			      items:
 			        type: text
 			      default: []
+			      example: ["Arrived early."]
 			      description: "Free-form comments, one line per element."
 			    "agree":
 			      type: boolean
@@ -174,7 +177,7 @@ describe('assembleQuill', () => {
 			      description: "Whether the applicant agrees to the terms."
 			"
 		`);
-		expect(JSON.parse(text('form.yaml'))).toEqual({
+		expect(JSON.parse(text('Form.yaml'))).toEqual({
 			schema: 'quillmark/form@0.2.0',
 			fields: [
 				{ name: 'FullName', schema_field: 'full_name', page: 0, rect: rect(200, 94, 300, 22) },
@@ -183,15 +186,6 @@ describe('assembleQuill', () => {
 			],
 			widgets: [{ name: 'Signature', type: 'signature', page: 0, rect: rect(200, 400, 300, 40) }]
 		});
-		expect(text('example.md')).toMatchInlineSnapshot(`
-			"~~~
-			$quill: "sample_form"
-			"full_name": "Ada Lovelace"
-			"comments":
-			  - "Arrived early."
-			~~~
-			"
-		`);
 	});
 
 	it('refuses a field naming a widget outside the inventory', () => {
@@ -235,7 +229,7 @@ describe('assembleQuill', () => {
 			)
 		};
 		const tree = assembleQuill(FORM, inventory, new Uint8Array());
-		const { fields } = JSON.parse(new TextDecoder().decode(tree.get('form.yaml')));
+		const { fields } = JSON.parse(new TextDecoder().decode(tree.get('Form.yaml')));
 		expect(fields[0]).toEqual({
 			name: 'FullName',
 			schema_field: 'full_name',
@@ -246,9 +240,8 @@ describe('assembleQuill', () => {
 		expect(fields.slice(1).filter((field: object) => 'font_size' in field)).toEqual([]);
 	});
 
-	it('writes no example.md when no kept field carries a sample', () => {
+	it('writes no example when no kept field carries a sample', () => {
 		const form = { ...FORM, fields: FORM.fields.map((f) => ({ ...f, example: undefined })) };
-		const tree = assembleQuill(form, INVENTORY, new Uint8Array());
-		expect([...tree.keys()]).toEqual(['Quill.yaml', 'form.pdf', 'form.yaml']);
+		expect(quillYaml(form, form.fields)).not.toContain('example:');
 	});
 });

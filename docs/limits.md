@@ -4,7 +4,7 @@
 
 | Set                        | Converts | The rest                                                                                                            |
 | -------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------- |
-| 60 published federal forms | 58       | no field (1), a portfolio (1)                                                                                       |
+| 61 published federal forms | 59       | no field (1), a portfolio (1)                                                                                       |
 | 1,354 Air Force forms      | 1,147    | no field (161), over 1,000 fields (16), read-only (14), a field off its page (7), not drawable (5), a portfolio (4) |
 
 Each converted form was rendered by the engine and every kept field read back at its place. `npm run corpus` reruns the first set. No page has been compared with Acrobat by eye ([#17](https://github.com/tonguetoquill/quillify/issues/17)).
@@ -25,8 +25,8 @@ It is drawn as pdf.js lays it out, in Helvetica, Times or Courier, and a mark th
 ## Every form
 
 - A signature field becomes an unsigned widget. What signing locks is not carried (decided in [#124](https://github.com/tonguetoquill/quillify/issues/124)).
-- A radio group reaches the quill as one boolean a button ([#41](https://github.com/tonguetoquill/quillify/issues/41)), and `suggest` gives a field no title: a caller's naming gives one.
-- A dropdown with `>`, `;` or `|` in an option becomes a text field.
+- A radio group's options that share a name reach the quill as one enum of their on-states, which a document stores as its value. An option named apart, and the options of a group with one that turns on as no value, or a blank, reach it as a boolean a button.
+- `suggest` gives a field no title: a caller's naming gives one.
 - A text field's limit becomes its `max:`, and its example is cut to it. A field of `lines` gets none: `max:` on a list counts its lines.
-- The background keeps links to `http`, `https` or a place in the file, and no other annotation ([#68](https://github.com/tonguetoquill/quillify/issues/68)). It keeps a layer that is off, and its stamped fields are untagged ([#192](https://github.com/tonguetoquill/quillify/issues/192)).
+- The background keeps links to `http`, `https` or a place in the file, a `www.` address as the `http://` one pdf.js opens, and one `mailto:` mailbox without its query, and no other annotation. It keeps a layer that is off, and its stamped fields are untagged ([#192](https://github.com/tonguetoquill/quillify/issues/192)).
 - A `zoom` on the host page that the layout frame cannot undo exactly makes `sanitize` reject with an error that names it.

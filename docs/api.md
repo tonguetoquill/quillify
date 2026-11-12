@@ -48,9 +48,13 @@ The quill's `form.yaml` carries a place's `fontSize` as its `font_size`.
 
 ## suggest
 
-Returns an entry for each field, named from the form's own tooltips: `{ id, keep, name, description }`. A caller may add a `title`, the label an editor shows for the field, an `example` and, on a text field, `text` (`line`, `paragraph` or `lines`). Names are snake_case.
+Returns an entry for each field, named from the form's own tooltips: `{ id, keep, name, description }`. The options a person can fill of a radio group, when there are two or more and each turns on as a value, share one name: the tooltip they share, or the end of the group's name, and their tooltips describe it. A caller may add a `title`, the label an editor shows for the field, an `example` and, on a text field, `text` (`line`, `paragraph` or `lines`). On a `checkbox` or a `radio` option, an `example` of `true` ticks it in the example, and any other leaves it blank. Names are snake_case.
 
 A naming is `{ name, description, fields }`, and those entries are its `fields`. A read-only field is left out whatever `keep` says.
+
+Kept fields may share a name when each takes the same value: text of one kind, a box, or a dropdown of the same options. The quill asks for it once and fills every one of them with the answer. The first of them gives its title, description and example where it has one, it is required when any of them is, and it takes no more characters than the least of them. Boxes that share a name are ticked together, so an example of `true` on any of them ticks them all. Signatures share no name.
+
+Radio options of one group that share a name are one answer: an enum of their on-states, each box ticked by its own value, so a document picks one. Each of them must turn on as a value the engine takes: not blank. An example of `true` on one of them makes its on-state the example. A radio option with a name of its own is a box, as before.
 
 ## check
 
@@ -67,7 +71,7 @@ Returns what is wrong with a naming, and an empty list when nothing is. A naming
 | `unnamed_field`     | `id`                    | a field has no entry                      |
 | `repeated_field`    | `id`                    | a field has two entries                   |
 | `field_name`        | `id`                    | a kept field's name is not snake_case     |
-| `duplicate_name`    | `name`                  | two kept fields share a name              |
+| `duplicate_name`    | `name`                  | kept fields of unlike values share a name |
 | `text_on_non_text`  | `id`                    | `text` is set on a field that is not text |
 | `engine`            | `message`, `diagnostic` | the engine refused the files              |
 
@@ -75,7 +79,7 @@ Returns what is wrong with a naming, and an empty list when nothing is. A naming
 
 Builds the quill and resolves to `{ ok: true, tree }` or `{ ok: false, problems }`. The problems are `check`'s, and `engine` when the engine refuses the files.
 
-`tree` maps a file name to its bytes (`Quill.yaml`, `form.yaml`, `form.pdf`, and `example.md` when a kept field has an example or is a dropdown with an option), and `Quill.fromTree` takes it.
+`tree` maps a file name to its bytes (`Quill.yaml`, `Form.yaml` and `form.pdf`), and `Quill.fromTree` takes it. A kept text field's example, a kept box's or radio option's example of `true`, and a kept dropdown's option are the fields' `example:` in `Quill.yaml`, which the engine's `exampleDocument()` fills in.
 
 ## limits
 

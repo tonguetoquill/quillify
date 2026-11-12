@@ -1,8 +1,8 @@
 import { init, isQuillmarkError } from '@quillmark/wasm';
 import { assembleQuill } from './assemble.js';
 import { check } from './naming.js';
-import type { Field, FieldNaming, Form, Naming, Problem } from './api.js';
-import type { QualifiedField } from './types.js';
+import { answer, typed } from './shape.js';
+import type { Field, Form, Naming, Problem } from './api.js';
 
 export type Quillified =
 	{ ok: true; tree: Map<string, Uint8Array> } | { ok: false; problems: readonly Problem[] };
@@ -16,37 +16,16 @@ const WIDGET = {
 	signature: 'Sig'
 } as const;
 
-/** The engine reads `max:` as a u32, and a cap of 0 takes nothing. */
-const capped = (max: number | undefined): max is number =>
-	max !== undefined && Number.isInteger(max) && max > 0 && max <= 0xffffffff;
-
-function typed(
-	field: Field,
-	text: FieldNaming['text']
-): Pick<QualifiedField, 'type' | 'multiline' | 'options' | 'max'> {
-	switch (field.kind) {
-		case 'text':
-			if (text === 'lines') return { type: 'array', multiline: true };
-			return {
-				type: 'string',
-				multiline: text ? text === 'paragraph' : field.multiline,
-				...(capped(field.maxLength) ? { max: field.maxLength } : {})
-			};
-		case 'choice':
-			return { type: 'enum', multiline: false, options: [...field.options] };
-		case 'checkbox':
-		case 'radio':
-			return { type: 'boolean', multiline: false };
-		case 'signature':
-			return { type: 'string', multiline: false };
-	}
-}
-
-/** A choice shows one of its options even when the naming gives none, so its list is seen in the example. */
+/**
+ * A choice shows one of its options even when the naming gives none, so its
+ * list is seen in the example. A box is ticked by an example of `true` alone.
+ */
 function shown(field: Field, suggested: string | undefined): string | undefined {
 	const value = suggested?.trim() || undefined;
 	if (field.kind === 'choice')
 		return value !== undefined && field.options.includes(value) ? value : field.options[0];
+	if (field.kind === 'checkbox' || field.kind === 'radio')
+		return value === 'true' ? value : undefined;
 	if (field.kind !== 'text') return undefined;
 	return value && field.maxLength ? [...value].slice(0, field.maxLength).join('') : value;
 }
@@ -60,19 +39,32 @@ export async function quillify(form: Form, naming: Naming): Promise<Quillified> 
 	if (problems.length > 0) return { ok: false, problems };
 
 	const byId = new Map(form.fields.map((field) => [field.id, field]));
+	// The kept options of one radio group that share a name are one enum of their on-states.
+	const kept = naming.fields.filter((entry) => entry.keep && !byId.get(entry.id)!.readOnly);
+	const answers = new Map<string, string[]>();
+	for (const [name, sharing] of Map.groupBy(kept, (entry) => entry.name)) {
+		const ons = sharing.map((entry) => answer(byId.get(entry.id)!));
+		if (sharing.length > 1 && ons.every((on) => on !== undefined))
+			answers.set(name, [...new Set(ons)]);
+	}
+
 	const tree = assembleQuill(
 		{
 			quill: { name: naming.name, description: naming.description },
 			fields: naming.fields.map((entry) => {
 				const field = byId.get(entry.id)!;
+				const options = field.kind === 'radio' ? answers.get(entry.name) : undefined;
+				const on = options && answer(field);
 				const example = shown(field, entry.example);
 				return {
 					widget: entry.id,
 					name: entry.name,
 					...(entry.title === undefined ? {} : { title: entry.title }),
 					description: entry.description,
-					...typed(field, entry.text),
-					...(example === undefined ? {} : { example }),
+					...(on
+						? { type: 'enum' as const, multiline: false, options, option: on }
+						: typed(field, entry.text)),
+					...(example === undefined ? {} : { example: on || example }),
 					keep: entry.keep && !field.readOnly,
 					required: field.required
 				};

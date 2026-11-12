@@ -6,9 +6,20 @@
 		"encryption": "AESv2, R4, empty user password",
 		"sha256": "702fe2abb0225d176537840d43ec5ae6417593d52af5177f63e37b8a7137070b"
 	},
+	"DD1610-2026-09_Request_and_Authorization_for_TDY_Travel.pdf": {
+		"form": "DD 1610",
+		"publisher": "esd.whs.mil",
+		"url": "https://www.esd.whs.mil/Portals/54/Documents/DD/forms/dd/dd1610.pdf",
+		"verified": "2026-10-19T10:15:00Z",
+		"kind": "hybrid",
+		"encryption": "AESv2, R4, empty user password",
+		"sha256": "12dcc9dc87fba7955973ef2d0a6f8c6848e15a9fb4fb929b47c539ba4018e33b"
+	},
 	"DD577_Appointment_Termination_Record.pdf": {
 		"form": "DD 577",
 		"publisher": "esd.whs.mil",
+		"url": "https://www.esd.whs.mil/Portals/54/Documents/DD/forms/dd/dd0577.pdf",
+		"verified": "2026-10-19T10:15:00Z",
 		"kind": "hybrid",
 		"encryption": "AESv2, R4, empty user password",
 		"sha256": "b160c0cbb0162f70d44b278b281481f3b01a2ca7ba8dfc45f97c76919266ccbb"
@@ -16,6 +27,8 @@
 	"DD689_Individual_Sick_Slip.pdf": {
 		"form": "DD 689",
 		"publisher": "esd.whs.mil",
+		"url": "https://www.esd.whs.mil/Portals/54/Documents/DD/forms/dd/dd0689.pdf",
+		"verified": "2026-10-19T10:15:00Z",
 		"kind": "hybrid",
 		"encryption": "AESv2, R4, empty user password",
 		"sha256": "32aacd097e9250e469adcbdb5b312e3de520d228f8ed3706a1ff2f9c1d3a85c3"
@@ -48,6 +61,8 @@
 	"DD2875_System_Authorization_Access_Request.pdf": {
 		"form": "DD 2875",
 		"publisher": "esd.whs.mil",
+		"url": "https://www.esd.whs.mil/Portals/54/Documents/DD/forms/dd/dd2875.pdf",
+		"verified": "2026-10-19T10:15:00Z",
 		"kind": "dynamic",
 		"encryption": "none",
 		"sha256": "e7247a22dac5633d00e761724f169d32186853300b9eec6d870df35103401885"

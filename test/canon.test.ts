@@ -21,9 +21,10 @@ it('holds each row of the fixtures README to the manifest and to a count of the 
 		string,
 		{ form: string; kind: string; encryption: string; generator?: string }
 	> = JSON.parse(read('test/fixtures/MANIFEST.json'));
-	const golden = (form: string) => {
+	// A golden is named as its fixture is up to the first underscore, so two editions of a form each have one.
+	const golden = (file: string) => {
 		const { pages, widgets } = JSON.parse(
-			read(`test/goldens/${form.replace(' ', '')}.inventory.json`)
+			read(`test/goldens/${file.split('_')[0]}.inventory.json`)
 		);
 		return { pages: pages.length, fields: widgets.length };
 	};
@@ -45,7 +46,7 @@ it('holds each row of the fixtures README to the manifest and to a count of the 
 				form,
 				kind,
 				locked: encryption === 'none' ? 'no' : 'yes',
-				...(generator ? await built(file) : golden(form))
+				...(generator ? await built(file) : golden(file))
 			}))
 		)
 	);

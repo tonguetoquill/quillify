@@ -51,10 +51,10 @@ async function stamped(pdf: Uint8Array) {
 }
 
 /**
- * What `quillify` writes in `form.yaml` is what the engine stamps: every entry
+ * What `quillify` writes in `Form.yaml` is what the engine stamps: every entry
  * is in the rendered PDF under the same name, on the same page and at the same
  * rect, on a page the size `sanitize` measured, and the PDF has no field
- * `form.yaml` does not name. qpdf reads the stamped fields back. The number of
+ * `Form.yaml` does not name. qpdf reads the stamped fields back. The number of
  * entries is returned, for a caller that knows how many there should be.
  */
 export async function expectClosure(
@@ -63,7 +63,7 @@ export async function expectClosure(
 	rendered: Uint8Array
 ): Promise<number> {
 	const { fields, widgets }: Record<string, { name: string; page: number; rect: Rect }[]> =
-		JSON.parse(new TextDecoder().decode(tree.get('form.yaml')));
+		JSON.parse(new TextDecoder().decode(tree.get('Form.yaml')));
 	const placed = [...fields, ...widgets];
 	const found = await stamped(rendered);
 

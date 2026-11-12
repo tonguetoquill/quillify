@@ -18,7 +18,7 @@ import type { FieldInventory, QualifiedForm, Rect } from './types.js';
 const W = 612;
 const H = 792;
 /** Bottom-left PDF space, as pdf-lib places it. */
-const BOX = { x: 120, y: 640, width: 300, height: 24 };
+const BOX = { x: 120, y: 400, width: 300, height: 24 };
 const VIEW: [number, number, number, number] = [0, 0, W, H];
 
 async function rotatedSource(): Promise<Uint8Array> {
@@ -26,7 +26,7 @@ async function rotatedSource(): Promise<Uint8Array> {
 	const page = doc.addPage([W, H]);
 	page.setRotation(degrees(90));
 	const font = await doc.embedFont(StandardFonts.Helvetica);
-	page.drawText('Unit', { x: 120, y: 672, size: 11, font });
+	page.drawText('Unit', { x: 120, y: 432, size: 11, font });
 	doc.getForm().createTextField('Unit').addToPage(page, BOX);
 	return doc.save({ useObjectStreams: false });
 }

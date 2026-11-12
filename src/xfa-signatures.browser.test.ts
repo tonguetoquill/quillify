@@ -94,7 +94,7 @@ for (const { form, signatures, captions } of FORMS) {
 		if (!quillified.ok) throw new Error(JSON.stringify(quillified.problems));
 
 		const { widgets }: { widgets: { name: string; type: string }[] } = JSON.parse(
-			new TextDecoder().decode(quillified.tree.get('form.yaml'))
+			new TextDecoder().decode(quillified.tree.get('Form.yaml'))
 		);
 		expect(widgets.map(({ name, type }) => ({ name, type }))).toEqual(
 			sanitized.fields

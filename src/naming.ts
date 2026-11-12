@@ -1,4 +1,5 @@
 import { SNAKE_CASE } from './types.js';
+import { answer, shape } from './shape.js';
 import type { Field, FieldNaming, Naming, Problem } from './api.js';
 
 const MAX_LENGTH = 40;
@@ -37,9 +38,39 @@ export function suggest(fields: readonly Field[]): FieldNaming[] {
 	const alike = new Set<string>();
 	for (const key of keys) if (key) (once.has(key) ? alike : once).add(key);
 
+	// The options of a group that each turn on as a value are one answer, under one name.
+	const groups = Map.groupBy(
+		fields.filter((field) => field.kind === 'radio'),
+		(field) => field.group
+	);
+	const answered = new Set(
+		[...groups]
+			.map(([group, options]) => [group, options.filter((o) => !o.readOnly)] as const)
+			.filter(([, options]) => options.length > 1 && options.every((o) => answer(o) !== undefined))
+			.map(([group]) => group)
+	);
+	const byGroup = new Map<string, Pick<FieldNaming, 'name' | 'description'>>();
+
 	const taken = new Set<string>();
+	const unique = (base: string) => {
+		let name = base;
+		for (let n = 2; taken.has(name); n++) name = `${base}_${n}`;
+		taken.add(name);
+		return name;
+	};
 	return fields.map((field, at) => {
 		const radio = field.kind === 'radio' ? field : undefined;
+		if (radio && answered.has(radio.group)) {
+			let named = byGroup.get(radio.group);
+			if (!named) {
+				const options = groups.get(radio.group)!;
+				const said = [...new Set(options.map((o) => squeeze(o.tooltip ?? '')).filter(Boolean))];
+				const words = (said.length === 1 && snake(said[0])) || snake(lastSegment(radio.group));
+				named = { name: unique(fit(lead(words), MAX_LENGTH)), description: said.join(' / ') };
+				byGroup.set(radio.group, named);
+			}
+			return { id: field.id, keep: !field.readOnly, ...named };
+		}
 		const said = radio && alike.has(keys[at]) ? squeeze(radio.on ?? '') : '';
 		const on = snake(said);
 		const head = on && whole(lead(tooltips[at]), MAX_LENGTH - 1 - on.length);
@@ -47,10 +78,7 @@ export function suggest(fields: readonly Field[]): FieldNaming[] {
 			on ||
 			tooltips[at] ||
 			snake(radio ? `${lastSegment(radio.group)} ${radio.on ?? ''}` : lastSegment(field.id));
-		const base = head ? `${head}_${on}` : fit(lead(words), MAX_LENGTH);
-		let name = base;
-		for (let n = 2; taken.has(name); n++) name = `${base}_${n}`;
-		taken.add(name);
+		const name = unique(head ? `${head}_${on}` : fit(lead(words), MAX_LENGTH));
 		const tooltip = squeeze(field.tooltip ?? '');
 		const description = said ? `${tooltip} (${said})` : tooltip;
 		return { id: field.id, keep: !field.readOnly, name, description };
@@ -106,8 +134,12 @@ export function check(fields: readonly Field[], naming: Naming): Problem[] {
 	if (kept.length === 0) problems.push({ code: 'nothing_kept' });
 	for (const { id, name } of kept)
 		if (!SNAKE_CASE.test(name)) problems.push({ code: 'field_name', id });
-	for (const [name, sharing] of Map.groupBy(kept, (entry) => entry.name))
-		if (sharing.length > 1) problems.push({ code: 'duplicate_name', name });
+	const byId = new Map(fields.map((field) => [field.id, field]));
+	for (const [name, sharing] of Map.groupBy(kept, (entry) => entry.name)) {
+		const shapes = new Set(sharing.map(({ id, text }) => shape(byId.get(id)!, text)));
+		if (sharing.length > 1 && (shapes.size > 1 || shapes.has(null)))
+			problems.push({ code: 'duplicate_name', name });
+	}
 	for (const { id, kind } of fields)
 		if (kind !== 'text' && entries.get(id)?.some((entry) => entry.text))
 			problems.push({ code: 'text_on_non_text', id });
