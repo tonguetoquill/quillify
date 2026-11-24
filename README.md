@@ -1,6 +1,6 @@
 # quillify
 
-Turn a published PDF form into a [Quillmark](https://github.com/borb-sh/quillmark) quill, in the browser.
+Turn a published PDF form into a [Quillmark](https://github.com/birdorbs/quillmark) quill, in the browser.
 
 Published forms rarely come as a clean fillable PDF. Most are encrypted with an empty password, and many are dynamic XFA, which only Acrobat lays out. quillify reads either kind and returns the page as a background with its form layer stripped, and every field with its place.
 
