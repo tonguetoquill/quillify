@@ -4,6 +4,8 @@ What a consumer can observe, in the latest release and since. Earlier releases a
 
 ## Unreleased
 
+- A quill's `Quill.yaml` declares `main` under one `schema:` block, as `@quillmark/wasm` 0.140 reads it: that release refuses a top-level `main:` as `quill::unknown_section`. A text field that takes lines declares `shape: lines`, where it declared `multiline: true`, which 0.141 refuses. `Quill.yaml` declares `requires: ">=0.140"`, and the peer is `@quillmark/wasm` 0.140.0 or later. A host moves both together, and rebuilds a quill it stored from an earlier release, or moves its `main:` under `schema:` and each `multiline: true` to `shape: lines`.
+
 ## v0.9.0 - 2026-11-02
 
 - A quill's example is its fields' `example:` in `Quill.yaml`, and the tree holds no `example.md`, as `@quillmark/wasm` 0.133 reads it: that release ignores a root `example.md`. `Quill.yaml` declares `requires: ">=0.133"`, and the peer is `@quillmark/wasm` 0.133.0 or later. A dropdown whose options hold `;`, `>` or `|` is an enum, where it was a text field, and a radio group whose on-states hold them is one enum, where its options were booleans. A field description of more than one line builds, where the engine refused it. A host moves both together, and rebuilds a quill it stored from an earlier release, or moves each value of its `example.md` onto its field as `example:` and raises the `requires` line.

@@ -1,7 +1,7 @@
-import { PDFDocument } from 'pdf-lib';
 import { describe, expect, it } from 'vitest';
 import formUrl from '../test/fixtures/DD577_Appointment_Termination_Record.pdf?url';
 import { fromTree, render } from '../test/engine.js';
+import { ticked } from '../test/ticked.js';
 import { quillify, sanitize, suggest } from './index.js';
 
 describe('a radio group', () => {
@@ -26,11 +26,10 @@ describe('a radio group', () => {
 			const [name] = names;
 			for (const on of new Set(options.map((option) => option.on!))) {
 				const md = `~~~\n$quill: ${ref}\n$kind: main\n${name}: ${JSON.stringify(on)}\n~~~\n`;
-				const stamped = (await PDFDocument.load(await render(quill, md))).getForm();
-				const ticked = radios
-					.filter((radio) => stamped.getCheckBox(radio.id).isChecked())
-					.map((radio) => radio.id);
-				expect(ticked).toEqual(options.filter((option) => option.on === on).map(({ id }) => id));
+				const lit = await ticked(built.tree.get('Form.yaml')!, await render(quill, md));
+				expect(radios.filter((radio) => lit.includes(radio.id)).map((radio) => radio.id)).toEqual(
+					options.filter((option) => option.on === on).map(({ id }) => id)
+				);
 			}
 		}
 	}, 120_000);

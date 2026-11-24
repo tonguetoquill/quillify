@@ -51,11 +51,32 @@ async function stamped(pdf: Uint8Array) {
 }
 
 /**
+ * The field name the engine stamps each `Form.yaml` entry under: the entries
+ * binding one `schema_field` are one field, named by the first of them, and an
+ * unbound widget is a field of its own name.
+ */
+export function stampedNames(formYaml: Uint8Array): Map<string, string> {
+	const { fields, widgets }: Record<string, { name: string; schema_field?: string }[]> = JSON.parse(
+		new TextDecoder().decode(formYaml)
+	);
+	const first = new Map<string, string>();
+	const names = new Map<string, string>();
+	for (const { name, schema_field } of fields) {
+		if (!first.has(schema_field!)) first.set(schema_field!, name);
+		names.set(name, first.get(schema_field!)!);
+	}
+	for (const { name } of widgets) names.set(name, name);
+	return names;
+}
+
+/**
  * What `quillify` writes in `Form.yaml` is what the engine stamps: every entry
- * is in the rendered PDF under the same name, on the same page and at the same
- * rect, on a page the size `sanitize` measured, and the PDF has no field
- * `Form.yaml` does not name. qpdf reads the stamped fields back. The number of
- * entries is returned, for a caller that knows how many there should be.
+ * is a widget in the rendered PDF under the field name `stampedNames` gives
+ * it, on the same page and at the same rect, on a page the size `sanitize`
+ * measured, and the PDF has no widget `Form.yaml` does not place. qpdf reads
+ * the stamped widgets back, those of one field in the order their entries
+ * come. The number of entries is returned, for a caller that knows how many
+ * there should be.
  */
 export async function expectClosure(
 	pages: readonly Size[],
@@ -65,11 +86,17 @@ export async function expectClosure(
 	const { fields, widgets }: Record<string, { name: string; page: number; rect: Rect }[]> =
 		JSON.parse(new TextDecoder().decode(tree.get('Form.yaml')));
 	const placed = [...fields, ...widgets];
-	const found = await stamped(rendered);
+	const names = stampedNames(tree.get('Form.yaml')!);
+	const found = Map.groupBy(await stamped(rendered), (field) => field.name);
 
-	expect(found.map((field) => field.name).sort()).toEqual(placed.map((entry) => entry.name).sort());
+	expect(
+		[...found.values()]
+			.flat()
+			.map((field) => field.name)
+			.sort()
+	).toEqual(placed.map((entry) => names.get(entry.name)!).sort());
 	for (const { name, page, rect } of placed) {
-		const got = found.find((field) => field.name === name)!;
+		const got = found.get(names.get(name)!)!.shift()!;
 		expect(got.page, name).toBe(page);
 		// The engine's page is the one sanitize measured, or a rect means nothing.
 		const [x0, y0, x1, y1] = got.mediaBox;

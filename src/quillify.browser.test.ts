@@ -2,6 +2,7 @@ import { PDFCheckBox, PDFDocument } from 'pdf-lib';
 import { describe, expect, it } from 'vitest';
 import { fromTree, render } from '../test/engine.js';
 import { sharedNameCheckboxes } from '../test/shared-name-checkboxes.js';
+import { ticked } from '../test/ticked.js';
 import { quillify, sanitize, suggest } from './index.js';
 import type { Field, FieldNaming, Form, Naming } from './index.js';
 
@@ -69,7 +70,7 @@ it("ticks DAF 988's Ordinary leave box alone when its example is true", async ()
 	const tree = await built(sanitized.form, naming);
 	const { name } = naming.find((entry) => entry.id === ordinary)!;
 	expect(text(tree, 'Quill.yaml')).toContain(
-		`    "${name}":\n      type: boolean\n      default: false\n      example: true\n`
+		`      "${name}":\n        type: boolean\n        default: false\n        example: true\n`
 	);
 
 	const { quill } = await fromTree(tree);
@@ -88,7 +89,8 @@ it('ticks the boxes of a shared name that turn on as the value it holds, and no 
 	const sanitized = await sanitize(await sharedNameCheckboxes());
 	if (!sanitized.ok) throw new Error(`refused as ${sanitized.refusal.code}`);
 	const naming = suggest(sanitized.form.fields);
-	const { ref, quill } = await fromTree(await built(sanitized.form, naming));
+	const tree = await built(sanitized.form, naming);
+	const { ref, quill } = await fromTree(tree);
 
 	const copies = ['copy', 'copy#2'];
 	const options = ['attached', 'attached#2', 'twice', 'twice#2', 'twice#3'];
@@ -100,9 +102,8 @@ it('ticks the boxes of a shared name that turn on as the value it holds, and no 
 	] as const) {
 		const { name } = naming.find((entry) => entry.id === id)!;
 		const filled = await render(quill, `~~~\n$quill: ${ref}\n$kind: main\n${name}: ${on}\n~~~\n`);
-		const stamped = (await PDFDocument.load(filled)).getForm();
-		const ticked = [...options, ...copies].filter((box) => stamped.getCheckBox(box).isChecked());
-		expect(ticked).toEqual(ticks);
+		const lit = await ticked(tree.get('Form.yaml')!, filled);
+		expect([...options, ...copies].filter((box) => lit.includes(box))).toEqual(ticks);
 	}
 }, 60_000);
 
@@ -176,82 +177,83 @@ describe('a form built by hand', () => {
 				'  name: "x"',
 				'  version: 0.1.0',
 				'  backend: acroform',
-				'  requires: ">=0.133"',
+				'  requires: ">=0.140"',
 				'  description: "A form."',
 				'',
-				'main:',
-				'  body:',
-				'    enabled: false',
-				'  fields:',
-				'    "last4":',
-				'      title: "SSN (last 4)"',
-				'      type: text',
-				'      default: ""',
-				'      max: 4',
-				'      example: "1234"',
-				'      description: ""',
-				'    "initial":',
-				'      type: text',
-				'      default: ""',
-				'      max: 1',
-				'      example: "\u{1D4D0}"',
-				'      description: ""',
-				'    "grade":',
-				'      type: enum',
-				'      values:',
-				'        - "E-1"',
-				'        - "E-2"',
-				'      default: ""',
-				'      example: "E-1"',
-				'      description: ""',
-				'    "component":',
-				'      type: enum',
-				'      values:',
-				'        - "RegAF"',
-				'        - "ANG"',
-				'      default: ""',
-				'      example: "ANG"',
-				'      description: ""',
-				'    "agree":',
-				'      type: boolean',
-				'      default: false',
-				'      description: ""',
-				'    "sick":',
-				'      type: boolean',
-				'      default: false',
-				'      description: ""',
-				'    "annual":',
-				'      type: boolean',
-				'      default: false',
-				'      description: ""',
-				// The naming asks for a paragraph of a single-line field.
-				'    "remarks":',
-				'      type: text',
-				'      default: ""',
-				'      multiline: true',
-				'      description: ""',
-				// The naming asks for nothing, and the field is multiline itself.
-				'    "narrative":',
-				'      type: text',
-				'      default: ""',
-				'      multiline: true',
-				'      description: ""',
-				// The naming asks for a line of a multiline field.
-				'    "heading":',
-				'      type: text',
-				'      default: ""',
-				'      description: ""',
-				// A required field declares no default.
-				'    "assigned_unit":',
-				'      type: text',
-				'      description: "Where the member is assigned."',
-				'    "roster":',
-				'      type: array',
-				'      items:',
+				'schema:',
+				'  main:',
+				'    body:',
+				'      enabled: false',
+				'    fields:',
+				'      "last4":',
+				'        title: "SSN (last 4)"',
 				'        type: text',
-				'      default: []',
-				'      example: ["A1C Doe"]',
-				'      description: ""',
+				'        default: ""',
+				'        max: 4',
+				'        example: "1234"',
+				'        description: ""',
+				'      "initial":',
+				'        type: text',
+				'        default: ""',
+				'        max: 1',
+				'        example: "\u{1D4D0}"',
+				'        description: ""',
+				'      "grade":',
+				'        type: enum',
+				'        values:',
+				'          - "E-1"',
+				'          - "E-2"',
+				'        default: ""',
+				'        example: "E-1"',
+				'        description: ""',
+				'      "component":',
+				'        type: enum',
+				'        values:',
+				'          - "RegAF"',
+				'          - "ANG"',
+				'        default: ""',
+				'        example: "ANG"',
+				'        description: ""',
+				'      "agree":',
+				'        type: boolean',
+				'        default: false',
+				'        description: ""',
+				'      "sick":',
+				'        type: boolean',
+				'        default: false',
+				'        description: ""',
+				'      "annual":',
+				'        type: boolean',
+				'        default: false',
+				'        description: ""',
+				// The naming asks for a paragraph of a single-line field.
+				'      "remarks":',
+				'        type: text',
+				'        default: ""',
+				'        shape: lines',
+				'        description: ""',
+				// The naming asks for nothing, and the field is multiline itself.
+				'      "narrative":',
+				'        type: text',
+				'        default: ""',
+				'        shape: lines',
+				'        description: ""',
+				// The naming asks for a line of a multiline field.
+				'      "heading":',
+				'        type: text',
+				'        default: ""',
+				'        description: ""',
+				// A required field declares no default.
+				'      "assigned_unit":',
+				'        type: text',
+				'        description: "Where the member is assigned."',
+				'      "roster":',
+				'        type: array',
+				'        items:',
+				'          type: text',
+				'        default: []',
+				'        example: ["A1C Doe"]',
+				'        description: ""',
 				''
 			].join('\n')
 		);
@@ -337,14 +339,14 @@ describe('a form built by hand', () => {
 		const tree = await built(await form(), leave);
 		expect(text(tree, 'Quill.yaml')).toContain(
 			[
-				'    "leave":',
-				'      type: enum',
-				'      values:',
-				'        - "S"',
-				'        - "A"',
-				'      default: ""',
-				'      example: "A"',
-				'      description: ""',
+				'      "leave":',
+				'        type: enum',
+				'        values:',
+				'          - "S"',
+				'          - "A"',
+				'        default: ""',
+				'        example: "A"',
+				'        description: ""',
 				''
 			].join('\n')
 		);
@@ -362,11 +364,8 @@ describe('a form built by hand', () => {
 		const example = quill.exampleDocument()!;
 		const rendered = example.toMarkdown();
 		example.free();
-		const filled = (await PDFDocument.load(await render(quill, rendered))).getForm();
-		expect(['annual', 'sick'].map((id) => filled.getCheckBox(id).isChecked())).toEqual([
-			true,
-			false
-		]);
+		const lit = await ticked(tree.get('Form.yaml')!, await render(quill, rendered));
+		expect(['annual', 'sick'].map((id) => lit.includes(id))).toEqual([true, false]);
 	}, 60_000);
 
 	it('writes radio options whose on-states hold ;, > or | as one enum, each box checked by its own value', async () => {
@@ -384,11 +383,8 @@ describe('a form built by hand', () => {
 		const example = quill.exampleDocument()!;
 		const rendered = example.toMarkdown();
 		example.free();
-		const filled = (await PDFDocument.load(await render(quill, rendered))).getForm();
-		expect(['annual', 'sick'].map((id) => filled.getCheckBox(id).isChecked())).toEqual([
-			true,
-			false
-		]);
+		const lit = await ticked(tree.get('Form.yaml')!, await render(quill, rendered));
+		expect(['annual', 'sick'].map((id) => lit.includes(id))).toEqual([true, false]);
 	}, 60_000);
 
 	it('ticks every box of a shared name when one of them has an example of true', async () => {
@@ -403,11 +399,8 @@ describe('a form built by hand', () => {
 		const example = quill.exampleDocument()!;
 		const rendered = example.toMarkdown();
 		example.free();
-		const filled = (await PDFDocument.load(await render(quill, rendered))).getForm();
-		expect(['agree', 'agree_again'].map((id) => filled.getCheckBox(id).isChecked())).toEqual([
-			true,
-			true
-		]);
+		const lit = await ticked(tree.get('Form.yaml')!, await render(quill, rendered));
+		expect(['agree', 'agree_again'].map((id) => lit.includes(id))).toEqual([true, true]);
 	}, 60_000);
 
 	it('writes one schema field for fields that share a name, and fills every box from it', async () => {
@@ -426,16 +419,16 @@ describe('a form built by hand', () => {
 		);
 		const tree = await built(await form(), shared);
 		const yaml = text(tree, 'Quill.yaml');
-		expect(yaml.split('\n    "remarks":\n')).toHaveLength(2);
+		expect(yaml.split('\n      "remarks":\n')).toHaveLength(2);
 		expect(yaml).toContain(
 			[
-				'    "remarks":',
-				'      title: "Remarks"',
-				'      type: text',
-				'      default: ""',
-				'      max: 4',
-				'      example: "1234"',
-				'      description: "What the member adds."'
+				'      "remarks":',
+				'        title: "Remarks"',
+				'        type: text',
+				'        default: ""',
+				'        max: 4',
+				'        example: "1234"',
+				'        description: "What the member adds."'
 			].join('\n')
 		);
 		expect(yaml).not.toContain('"last4"');
@@ -447,8 +440,10 @@ describe('a form built by hand', () => {
 		const { ref, quill } = await fromTree(tree);
 		const markdown = `~~~\n$quill: ${ref}\n$kind: main\nremarks: "4321"\n~~~\n`;
 		const filled = (await PDFDocument.load(await render(quill, markdown))).getForm();
-		expect(filled.getTextField('last4').getText()).toBe('4321');
-		expect(filled.getTextField('remarks').getText()).toBe('4321');
+		const remarks = filled.getTextField('last4');
+		expect(remarks.getText()).toBe('4321');
+		expect(remarks.acroField.getWidgets()).toHaveLength(2);
+		expect(filled.getFields().map((field) => field.getName())).not.toContain('remarks');
 	}, 60_000);
 
 	it('fills a field of lines in the engine from a one-line example', async () => {

@@ -35,7 +35,7 @@ function fieldYaml(field: Named): string[] {
 		case 'string':
 			lines.push('      type: text');
 			if (!field.required) lines.push('      default: ""');
-			if (field.multiline) lines.push('      multiline: true');
+			if (field.multiline) lines.push('      shape: lines');
 			if (field.max !== undefined) lines.push(`      max: ${field.max}`);
 			if (field.example !== undefined) lines.push(`      example: ${q(field.example)}`);
 			break;
@@ -72,16 +72,17 @@ export function quillYaml(form: Qualified, fields: Named[]): string {
 		`  name: ${q(form.quill.name)}`,
 		`  version: ${QUILL_VERSION}`,
 		'  backend: acroform',
-		'  requires: ">=0.133"',
+		'  requires: ">=0.140"',
 		`  description: ${q(form.quill.description)}`,
 		'',
-		'main:',
-		'  body:',
-		'    enabled: false'
+		'schema:',
+		'  main:',
+		'    body:',
+		'      enabled: false'
 	];
 	if (fields.length > 0) {
-		lines.push('  fields:');
-		for (const field of fields) for (const line of fieldYaml(field)) lines.push(line);
+		lines.push('    fields:');
+		for (const field of fields) for (const line of fieldYaml(field)) lines.push(`  ${line}`);
 	}
 	return lines.join('\n') + '\n';
 }

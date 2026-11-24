@@ -152,29 +152,30 @@ describe('assembleQuill', () => {
 			  name: "sample_form"
 			  version: 0.1.0
 			  backend: acroform
-			  requires: ">=0.133"
+			  requires: ">=0.140"
 			  description: "A sample application."
 
-			main:
-			  body:
-			    enabled: false
-			  fields:
-			    "full_name":
-			      type: text
-			      default: ""
-			      example: "Ada Lovelace"
-			      description: "Full legal name of the applicant."
-			    "comments":
-			      type: array
-			      items:
+			schema:
+			  main:
+			    body:
+			      enabled: false
+			    fields:
+			      "full_name":
 			        type: text
-			      default: []
-			      example: ["Arrived early."]
-			      description: "Free-form comments, one line per element."
-			    "agree":
-			      type: boolean
-			      default: false
-			      description: "Whether the applicant agrees to the terms."
+			        default: ""
+			        example: "Ada Lovelace"
+			        description: "Full legal name of the applicant."
+			      "comments":
+			        type: array
+			        items:
+			          type: text
+			        default: []
+			        example: ["Arrived early."]
+			        description: "Free-form comments, one line per element."
+			      "agree":
+			        type: boolean
+			        default: false
+			        description: "Whether the applicant agrees to the terms."
 			"
 		`);
 		expect(JSON.parse(text('Form.yaml'))).toEqual({
@@ -206,7 +207,9 @@ describe('assembleQuill', () => {
 			{ ...FORM.fields[0], title: 'DAFSC/Duty Title' },
 			{ ...FORM.fields[0], name: 'untitled' }
 		]);
-		expect(yaml).toContain('    "full_name":\n      title: "DAFSC/Duty Title"\n      type: text\n');
+		expect(yaml).toContain(
+			'      "full_name":\n        title: "DAFSC/Duty Title"\n        type: text\n'
+		);
 		expect(yaml.match(/title:/g)).toHaveLength(1);
 	});
 
@@ -216,7 +219,7 @@ describe('assembleQuill', () => {
 			{ ...FORM.fields[0], name: 'open' }
 		]);
 		expect(yaml).toContain(
-			'    "full_name":\n      type: text\n      default: ""\n      max: 35\n'
+			'      "full_name":\n        type: text\n        default: ""\n        max: 35\n'
 		);
 		expect(yaml.match(/max:/g)).toHaveLength(1);
 	});

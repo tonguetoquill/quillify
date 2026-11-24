@@ -59,10 +59,12 @@ it('a quill named null with fields named true, false and null loads, fills and r
 	const { payloadItems } = example.main;
 	const markdown = example.toMarkdown();
 	example.free();
+	// A text value is content, its plain text beside its blocks.
+	const plain = (text: string) => expect.objectContaining({ codec: 'plain', text });
 	expect(payloadItems).toEqual([
-		{ type: 'field', key: 'true', value: 'first' },
-		{ type: 'field', key: 'false', value: 'second' },
-		{ type: 'field', key: 'null', value: 'third' }
+		{ type: 'field', key: 'true', value: plain('first') },
+		{ type: 'field', key: 'false', value: plain('second') },
+		{ type: 'field', key: 'null', value: plain('third') }
 	]);
 
 	const stamped = (await PDFDocument.load(await render(quill, markdown))).getForm();
