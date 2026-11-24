@@ -67,7 +67,7 @@ it('writes a ticked boolean as a bare true, no other boolean, and no signature',
 	const yaml = text(tree, 'Quill.yaml');
 	expect(yaml.match(/example:.*/g)).toEqual(['example: "x"', 'example: true']);
 	expect(yaml).toContain(
-		'    "tick":\n      type: boolean\n      default: false\n      example: true\n'
+		'      "tick":\n        type: boolean\n        default: false\n        example: true\n'
 	);
 });
 
@@ -77,12 +77,12 @@ it('writes a character the engine refuses as four hex digits', () => {
 });
 
 it('writes no fields key for a form with no field', () => {
-	expect(quillYaml({ quill: QUILL, fields: [] }, []).endsWith('    enabled: false\n')).toBe(true);
+	expect(quillYaml({ quill: QUILL, fields: [] }, []).endsWith('      enabled: false\n')).toBe(true);
 });
 
 it('marks a text box that takes lines', () => {
 	const yaml = quillYaml({ quill: QUILL, fields: [] }, [{ ...FIELD, multiline: true }]);
-	expect(yaml).toContain('      default: ""\n      multiline: true\n');
+	expect(yaml).toContain('        default: ""\n        shape: lines\n');
 });
 
 it('writes a dropdown whose values hold ;, > or | as an enum of them', () => {
@@ -90,16 +90,16 @@ it('writes a dropdown whose values hold ;, > or | as an enum of them', () => {
 		{ ...FIELD, type: 'enum', options: ['', 'a;b', 'c>d', 'e|f'] }
 	]);
 	expect(yaml).toContain(
-		'      type: enum\n      values:\n        - "a;b"\n        - "c>d"\n        - "e|f"\n      default: ""\n'
+		'        type: enum\n        values:\n          - "a;b"\n          - "c>d"\n          - "e|f"\n        default: ""\n'
 	);
 });
 
 it('gives a dropdown and a list a default unless they are required', () => {
 	const yaml = (type: 'enum' | 'array', required: boolean) =>
 		quillYaml({ quill: QUILL, fields: [] }, [{ ...FIELD, type, options: ['a'], required }]);
-	expect(yaml('enum', false)).toContain('        - "a"\n      default: ""\n');
+	expect(yaml('enum', false)).toContain('          - "a"\n        default: ""\n');
 	expect(yaml('enum', true)).not.toContain('default:');
-	expect(yaml('array', false)).toContain('      default: []\n');
+	expect(yaml('array', false)).toContain('        default: []\n');
 	expect(yaml('array', true)).not.toContain('default:');
 });
 

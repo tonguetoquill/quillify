@@ -15,5 +15,5 @@ it('writes a choice of 200,000 options', () => {
 			required: false
 		}
 	]);
-	expect(yaml.split('\n').filter((line) => line.startsWith('        - '))).toHaveLength(200_000);
+	expect(yaml.split('\n').filter((line) => line.startsWith('          - '))).toHaveLength(200_000);
 });

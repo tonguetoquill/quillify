@@ -16,7 +16,7 @@ export const open = (quill: Quill, doc: Document): Promise<LiveSession> => engin
 
 export async function render(quill: Quill, markdown: string): Promise<Uint8Array> {
 	const { Document } = await init();
-	const doc = Document.fromMarkdown(markdown);
+	const doc = Document.parse(markdown);
 	try {
 		return (await engine.render(quill, doc, { format: 'pdf' })).artifacts[0].bytes;
 	} finally {

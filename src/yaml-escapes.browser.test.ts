@@ -88,7 +88,12 @@ it.each(CHARACTERS.flatMap((character) => SLOTS.map((slot) => [slot, ...characte
 		const line = `Sample${here('an example')}`.replace(/\u0085$/, '');
 		expect(payloadItems).toEqual([
 			{ type: 'field', key: pick.name, value: `A${here('an option')}` },
-			{ type: 'field', key: sample.name, value: line }
+			// A text value is content, its plain text beside its blocks.
+			{
+				type: 'field',
+				key: sample.name,
+				value: expect.objectContaining({ codec: 'plain', text: line })
+			}
 		]);
 		expect((await render(quill, markdown)).length).toBeGreaterThan(0);
 	},

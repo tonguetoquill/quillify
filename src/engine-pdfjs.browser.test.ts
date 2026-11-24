@@ -1,4 +1,5 @@
 import { expect, it } from 'vitest';
+import { stampedNames } from '../test/closure.js';
 import { fromTree, render } from '../test/engine.js';
 import { quillify, sanitize, suggest } from './index.js';
 import { openPdf } from './pdfjs.js';
@@ -9,9 +10,10 @@ const fixtures = import.meta.glob<string>('../test/fixtures/*.pdf', {
 	eager: true
 });
 
-/** What pdf.js tells its scripting sandbox about one widget. */
+/** What pdf.js tells its scripting sandbox about one widget, or about the field over a field's widgets. */
 interface FieldObject {
 	type: string;
+	kidIds?: unknown;
 	value: unknown;
 	editable?: boolean;
 	hidden?: boolean;
@@ -58,7 +60,7 @@ for (const [path, url] of Object.entries(fixtures)) {
 			);
 
 			const stamped = (await pdf.getFieldObjects()) as unknown as Map<string, FieldObject[]>;
-			const objects = [...stamped.values()].flat();
+			const objects = [...stamped.values()].flat().filter((object) => !object.kidIds);
 			const kept = read.filter((field) => !field.readOnly);
 			expect(objects).toHaveLength(kept.reduce((count, field) => count + field.places.length, 0));
 			expect(objects.filter((object) => object.hidden || object.actions)).toEqual([]);
@@ -66,14 +68,16 @@ for (const [path, url] of Object.entries(fixtures)) {
 			expect(objects.filter((object) => object.type !== 'signature' && !object.editable)).toEqual(
 				[]
 			);
-			// A field painted in two places is two widgets, and `Form.yaml` names each.
+			// A field painted in two places is two widgets of one field.
 			const typed = new Set(naming.filter((entry) => entry.example).map((entry) => entry.name));
 			const placed: { name: string; schema_field: string }[] = JSON.parse(
 				new TextDecoder().decode(quillified.tree.get('Form.yaml'))
 			).fields;
+			const names = stampedNames(quillified.tree.get('Form.yaml')!);
 			for (const { name, schema_field } of placed)
 				if (typed.has(schema_field))
-					expect(stamped.get(name), name).toMatchObject([{ type: 'text', value: 'x' }]);
+					for (const widget of stamped.get(names.get(name)!)!.filter((object) => !object.kidIds))
+						expect(widget, name).toMatchObject({ type: 'text', value: 'x' });
 		} finally {
 			await close();
 			quill.free();
